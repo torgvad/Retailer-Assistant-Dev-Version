@@ -21,7 +21,7 @@ thirty_min_queries = []
 sixty_min_queries = []
 two_hour_queries = []
 webstyles = {}
-sleep_time = 10
+sleep_time = 1800
 scraped_queries = []
 default_header = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36', }
 

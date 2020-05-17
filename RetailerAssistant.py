@@ -153,7 +153,7 @@ def timed_checker():
     threaded_listing_connect = sqlite3.connect('data/listings.db')
     threaded_listing_cursor = threaded_listing_connect.cursor()
     while True:
-        time.sleep(3)
+        time.sleep(300)
         fetch_listings(threaded_listing_cursor, threaded_listing_connect)
         if check_scraper_status():
             scraper_check_label['text'] = "Scraper is online"
