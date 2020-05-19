@@ -400,6 +400,7 @@ def run_scrape(query, webstyle, url, website):
         attempt_counter += 1
         if attempt_counter >= 20:
             res = requests.get(url, headers=default_header)
+            break
     soup = BeautifulSoup(res.text, 'html.parser')
     #all_listing_elements = []
     all_listings = get_every_listing(soup, webstyle)

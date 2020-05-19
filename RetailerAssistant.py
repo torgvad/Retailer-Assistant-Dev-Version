@@ -13,7 +13,6 @@ from datetime import timedelta
 import datetime
 
 first_scrape_completed = {}
-shortest_scrape_time = 1
 default_retailer = "Retailer"
 default_time = "Time"
 default_query = "ID, search name, retailer, excluded, min and max price, max shipping"
@@ -27,6 +26,23 @@ listing_link_num = 0
 link_num = 0
 listing_links = {}
 links = {}
+
+
+# if scraper is running kill it
+def kill_scraper():
+    process_name = "RetailerAssistantScraper.exe"
+    for proc in psutil.process_iter():
+        try:
+            if process_name.lower() in proc.name().lower():
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                listing_box.insert(END, "Scraper is already not running.\n")
+        except:
+            listing_box.insert(END, "Scraper is already not running.\n")
+    if check_scraper_status():
+        scraper_check_label['text'] = "Scraper is online"
+    else:
+        scraper_check_label['text'] = "Scraper is offline"
 
 
 # start RetailAssistantScraper.exe and change the label to represent the change
@@ -428,6 +444,9 @@ exclude_entry.place(x=400, y=102)
 
 restart_scraper_button = Button(search_tab, text="Restart Scraper", command=lambda: restart_scraper())
 restart_scraper_button.place(x=150, y=590)
+
+kill_scraper_button = Button(search_tab, text="Kill Scraper", command=lambda: kill_scraper())
+kill_scraper_button.place(x=250, y=590)
 
 scraper_check_label = Label(search_tab, text=scraper_status)
 scraper_check_label.place(x=50, y=590)
