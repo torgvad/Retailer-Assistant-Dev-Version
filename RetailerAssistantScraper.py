@@ -31,6 +31,16 @@ current_header = {"User-Agent": "Mozilla/5.0 (X11; U; Linux x86_64; en-US) Apple
 first_proxy = FreeProxy(country_id=['US']).get()
 current_proxy = {"http": first_proxy, }
 
+class custom_formatting:
+    @staticmethod
+    def format(listing):
+        return listing
+
+class custom_filter:
+    @staticmethod
+    def filter(filtered_listing, unfiltered_listing):
+        return filtered_listing
+
 
 # use Freeproxy to get new proxy ip and port
 def get_new_header_and_proxy():
@@ -126,16 +136,35 @@ def format_slash_url(url, slash_link):
 
 
 # format ebay's "new listing" results
-def format_ebay_new_listing(formatted_item, original_item):
-    if formatted_item[0] == "New Listing" or formatted_item[0] == "ex":
-        element = str(original_item[0])
+def format_ebay_new_listing(filtered_listing, unfiltered_listing):
+    if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
+        element = str(unfiltered_listing[0])
         span_index = element.index("/span>")
         element = element[span_index+6:]
         h3_index = element.index("</h3")
-        formatted_item[0] = element[:h3_index]
-    return formatted_item
+        filtered_listing[0] = element[:h3_index]
+    return filtered_listing
 
-
+class custom_Goodwill_filter(custom_filter):
+    @staticmethod
+    def filter(filtered_listing, unfiltered_listing):
+        date = str(unfiltered_listing[4])
+        date = date[date.find('data-countdown') + 16:]
+        date = date[:date.find('>') - 1]
+        filtered_listing[4] = date
+        return filtered_listing
+    
+class custom_Ebay_filter(custom_filter):
+    @staticmethod
+    def filter(filtered_listing, unfiltered_listing):
+        if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
+            element = str(unfiltered_listing[0])
+            span_index = element.index("/span>")
+            element = element[span_index + 6:]
+            h3_index = element.index("</h3")
+            filtered_listing[0] = element[:h3_index]
+        return filtered_listing
+    
 # trim data inside element that stores bid end
 def format_goodwill_listing(formatted_item, original_item):
     date = str(original_item[4])
@@ -145,15 +174,26 @@ def format_goodwill_listing(formatted_item, original_item):
     return formatted_item
 
 
+def custom_filter_controller(retailer, filtered_listing, unfiltered_listing):
+    retailer = retailer.replace(" ", "_")
+    try:
+        if issubclass(eval("custom_"+retailer+"_filter"), custom_filter):
+            return eval("custom_" + retailer + "_filter").filter(filtered_listing, unfiltered_listing)
+        else:
+            return filtered_listing
+    except:
+        return filtered_listing
+
+'''
 # if the site requires special formatting it gets sent to a function to format it
-def special_site_formatting_controller(site, formatted_item, original_item):
+def custom_filter_controller(site, formatted_item, original_item):
     switch = {
         "Ebay": format_ebay_new_listing,
         "Goodwill": format_goodwill_listing
     }
     if site in switch:
         return switch[site](formatted_item, original_item)
-    return formatted_item
+    return formatted_item'''
 
 
 # find the href assignment
@@ -208,7 +248,7 @@ def format_elements(element_list, url, website):
             else:
                 str_item = format_str_element(str_item)
             formatted_list[i] = str_item
-    formatted_list = special_site_formatting_controller(website, formatted_list, element_list)
+    formatted_list = custom_filter_controller(website, formatted_list, element_list)
     return formatted_list
 
 
@@ -280,7 +320,6 @@ def get_elements(listing, webstyle):
             # if the link is an href within the parent element
             if len(parent_element) > 0:
                 parent_element = [parent_element[0]]
-            #print(parent_element)
             if len(parent_element) == 0 and i == 19:
                 str_listing = str(listing)
                 parent_element = str_listing[:str_listing.find(">")]
@@ -451,7 +490,81 @@ def format_goodwill(listing):
         listing[1] = 'ex'
     return listing
 
+class custom_Ebay_formatting(custom_formatting):
+    @staticmethod
+    def format(listing):
+        if listing[9] != "ex":
+            listing[1] = listing[3]
+            listing[3] = "ex"
+            extended_date = date.today() + timedelta(days=7)
+            listing[4] = extended_date.strftime('%Y-%m-%d')
+        if listing[4] == "ex":
+            extended_date = date.today() + timedelta(days=30)
+            listing[4] = extended_date.strftime('%Y-%m-%d')
+        return listing
 
+
+class custom_Property_Room_formatting(custom_formatting):
+    @staticmethod
+    def format(listing):
+        time_left = listing[4]
+        remaining_time = 0
+        try:
+            remaining_time = int(time_left[0])
+        except:
+            return False
+        if listing[4].find('d') != -1:
+            extended_date = date.today() + timedelta(days=remaining_time)
+        elif listing[4].find('h') != -1:
+            extended_date = date.today() + timedelta(hours=int(time_left[0:1]))
+        else:
+            return False
+        listing[4] = extended_date.strftime('%Y-%m-%d')
+        return listing
+
+class custom_Goodwill_formatting(custom_formatting):
+    @staticmethod
+    def format(listing):
+        title = listing[0]
+        title = title[title.find("\n"):]
+        title = title[21:title.find("\r")]
+        listing[0] = title
+        date = listing[4]
+        print(date)
+        print(len(date))
+        if len(date) > 0:
+            date = date[:date.find(' ')]
+            slash1 = date.find('/')
+            slash2 = date[slash1 + 1:].find("/") + slash1 + 1
+            month = date[:slash1]
+            day = date[slash1 + 1:slash2]
+            year = date[slash2 + 1:]
+            if len(month) == 1:
+                month = "0" + month
+            if len(day) == 1:
+                day = "0" + day
+            listing[4] = year + "-" + month + "-" + day
+        else:
+            listing[4] = "Stock Item"
+        if listing[9] == 'Buy It Now':
+            listing[3] = listing[1]
+            listing[1] = 'ex'
+        return listing
+
+
+def last_minute_formatting(listing, retailer):
+    retailer = retailer.replace(" ", "_")
+    try:
+        if issubclass(eval("custom_"+retailer+"_formatting"), custom_formatting):
+            return eval("custom_" + retailer + "_formatting").format(listing)
+        else:
+
+            return listing
+    except:
+
+        return listing
+
+'''
 # controller for special listing formatting
 def last_minute_formatting(listing, retailer):
     switch = {
@@ -462,7 +575,7 @@ def last_minute_formatting(listing, retailer):
     if retailer in switch:
         return switch[retailer](listing)
     else:
-        return listing
+        return listing '''
 
 
 # take the listings and their corresponding query_id and add them to the listings.db
