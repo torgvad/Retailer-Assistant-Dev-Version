@@ -21,8 +21,10 @@ thirty_min_queries = []
 sixty_min_queries = []
 two_hour_queries = []
 webstyles = {}
-sleep_time = 1800
+sleep_time = 10
 scraped_queries = []
+queries = {}
+
 default_header = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36', }
 
 current_header = {"User-Agent": "Mozilla/5.0 (X11; U; Linux x86_64; en-US) AppleWebKit/532.0 (KHTML, like Gecko) Chrome/4.0.208.0 Safari/532.0",}
@@ -59,7 +61,7 @@ def format_url(link, query):
         return link % (1, query[1])
 
 
-# deletes items that have dates before today
+# deletes listings that have dates before today
 def remove_listings():
     conn = sqlite3.connect('data/listings.db')
     cursor = conn.cursor()
@@ -69,7 +71,7 @@ def remove_listings():
     conn.commit()
 
 
-# creates global list of queries that already have been ran before
+# creates global list of queries to track which have already been scraped
 def check_number_of_scraped_queries():
     global scraped_queries
     raw_scraped_queries = cursor.execute('''SELECT DISTINCT query_id FROM listings;''').fetchall()
@@ -80,22 +82,15 @@ def check_number_of_scraped_queries():
 
 # removes queries that no longer exist in database
 def clean_removed_queries(queries_cursor):
-    conn = sqlite3.connect('data/queries.db')
-    cursor = conn.cursor()
     distinct_queries = queries_cursor.execute('''SELECT DISTINCT id FROM queries;''').fetchall()
     existing_queries = []
     for tuple in distinct_queries:
         existing_queries.append(int(tuple[0]))
-    for query in thirty_min_queries:
-        if int(query[0]) not in existing_queries:
-            thirty_min_queries.pop(thirty_min_queries.index(query))
-    for query in sixty_min_queries:
-        if int(query[0]) not in existing_queries:
-            sixty_min_queries.pop(sixty_min_queries.index(query))
-    for query in two_hour_queries:
-        if int(query[0]) not in existing_queries:
-            two_hour_queries.pop(two_hour_queries.index(query))
-    conn.commit()
+    for time_list in queries:
+        for scrape_time in queries[time_list]:
+            for query in queries[time_list][scrape_time]:
+                if query[0] not in existing_queries:
+                    queries[time_list][scrape_time].remove(query)
 
 
 '''the controller func that grabs queries added while running, 
@@ -235,46 +230,41 @@ def format_text_in_element(str_item):
     return str_item, element_name_end
 
 
-# grabs all queries and puts each in their list, only done at the start
-def check_queries():
+def add_queries_to_dict(new_queries, queries_cursor):
     global latest_query_id
-    new_queries = queries_cursor.execute('''SELECT * from queries;''').fetchall()
     for query in new_queries:
         intermediate_list = list(query)
         intermediate_list[3] = create_exclude_list(query[3])
-        query = tuple(intermediate_list)
-        if query[7] == 30:
-            thirty_min_queries.append(query)
-        elif query[7] == 1:
-            sixty_min_queries.append(query)
-        else:
-            two_hour_queries.append(query)
+        try:
+            queries[query[2]][query[7]].append(query)
+        except:
+            queries[query[2]] = {}
+            retailer_val = queries[query[2]]
+            retailer_val[30] = []
+            retailer_val[1] = []
+            retailer_val[2] = []
+            retailer_val[query[7]].append(query)
     latest_query_id = queries_cursor.execute('''SELECT MAX(id) from queries;''').fetchone()[0]
+
+
+def check_queries():
+    global latest_query_id, queries
+    new_queries = queries_cursor.execute('''SELECT * from queries;''').fetchall()
+    add_queries_to_dict(new_queries, queries_cursor)
 
 
 # if the max id is larger than latest_query_id then append it to the queries array
 def update_queries(queries_cursor):
+    time.sleep(10)
     global latest_query_id
     current_high_id = queries_cursor.execute('''SELECT MAX(id) from queries;''').fetchone()[0]
     if current_high_id != None and current_high_id > latest_query_id:
         new_queries = queries_cursor.execute('''SELECT * from queries where id > ?;''', [latest_query_id]).fetchall()
-        for query in new_queries:
-            intermediate_list = list(query)
-            intermediate_list[3] = create_exclude_list(query[3])
-            query = tuple(intermediate_list)
-            initial_scrape_new_listing(query)
-            if query[7] == 30:
-                thirty_min_queries.append(query)
-            elif query[7] == 1:
-                sixty_min_queries.append(query)
-            else:
-                two_hour_queries.append(query)
-        latest_query_id = current_high_id
+        add_queries_to_dict(new_queries, queries_cursor)
 
 
 # given the listing get every element within it
 def get_elements(listing, webstyle):
-    print("OWO")
     i = 3
     element_list = []
     while i < len(webstyle):
@@ -290,7 +280,7 @@ def get_elements(listing, webstyle):
             # if the link is an href within the parent element
             if len(parent_element) > 0:
                 parent_element = [parent_element[0]]
-            print(parent_element)
+            #print(parent_element)
             if len(parent_element) == 0 and i == 19:
                 str_listing = str(listing)
                 parent_element = str_listing[:str_listing.find(">")]
@@ -497,9 +487,9 @@ def add_listing_to_db(query_id, retailer, listings):
 
 
 # runs until reaches the oldest item
-def cycle_through_pages(query, webstyle, web_name):
+def cycle_through_pages(query, webstyle):
+    web_name = query[2]
     i = 1
-    page_number_loc = 0
     page_number_loc = webstyle[0].find("%d")
     if page_number_loc == -1:
         url = webstyle[0] % query[1]
@@ -520,47 +510,35 @@ def cycle_through_pages(query, webstyle, web_name):
         i += 1
 
 
+def initiate_scrapes_in_retailer_dict(queries_dict, scrape_time):
+    for query in queries_dict:
+        if query[0] in scraped_queries:
+            cycle_through_pages(query, webstyles[query[2]])
+        else:
+            initial_scrape_new_listing(query)
+            scraped_queries.append(query[0])
+
+
+def cycle_through_retailers_dict(queries_dict):
+    for scrape_time in queries_dict:
+        if len(queries_dict[scrape_time]) > 0:
+            initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 30)
+            if total_sleeps == 2:
+                initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 1)
+            if total_sleeps >= 4:
+                initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 2)
+
+
 # match each request with webstyle
 def scrape():
-    total_sleeps = 0
-    global thirty_min_queries
+    global total_sleeps
     while True:
         time.sleep(sleep_time)
         get_new_header_and_proxy()
         total_sleeps += 1
-        for web_name in webstyles:
-            webstyle = webstyles[web_name]
-            for query in thirty_min_queries:
-                if query[2] == web_name:
-                    if query[0] in scraped_queries:
-                        cycle_through_pages(query, webstyle, web_name)
-                    else:
-                        initial_scrape_new_listing(query)
-                        scraped_queries.append(query[0])
-            if total_sleeps == 2:
-                for query in sixty_min_queries:
-                    if query[2] == web_name:
-                        if query[0] in scraped_queries:
-                            cycle_through_pages(query, webstyle, web_name)
-                        else:
-                            initial_scrape_new_listing(query)
-                            scraped_queries.append(query[0])
-            if total_sleeps >= 4:
-                for query in sixty_min_queries:
-                    if query[2] == web_name:
-                        if query[0] in scraped_queries:
-                            cycle_through_pages(query, webstyle, web_name)
-                        else:
-                            initial_scrape_new_listing(query)
-                            scraped_queries.append(query[0])
-                for query in two_hour_queries:
-                    if query[2] == web_name:
-                        if query[0] in scraped_queries:
-                            cycle_through_pages(query, webstyle, web_name)
-                        else:
-                            initial_scrape_new_listing(query)
-                            scraped_queries.append(query[0])
-                total_sleeps = 0
+        for retailer_list in queries:
+            cycle_through_retailers_dict(queries[retailer_list])
+        total_sleeps += 1
 
 
 conn = sqlite3.connect('data/listings.db')
