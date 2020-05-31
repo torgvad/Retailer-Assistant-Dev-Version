@@ -179,23 +179,29 @@ def timed_checker():
 
 # clear the listings of the currently selected query
 def clear_one_archive():
+    global query_list, archive_box, last_listing
+    archive_box.configure(state='normal')
     if query_select.current() != 0:
         selected_query_id = query_select.get()[:query_select.get().find(",")]
         listing_count = listing_cursor.execute('''SELECT * FROM listings WHERE query_id=?;''', [selected_query_id]).fetchone()
+        archive_box.delete('1.0', 'end')
         if listing_count == None:
+            archive_box.configure(state='disabled')
             return
         else:
             listing_count = listing_count[0]
-        global last_listing
         listing_cursor.execute('''DELETE from listings WHERE query_id=?; ''', [selected_query_id])
         listing_connect.commit()
         last_listing = listing_cursor.execute('''SELECT MAX(id) from listings;''').fetchone()[0]
     else:
         archive_box.insert(END, "You must select a query in order to clear its archives.\n")
+    archive_box.configure(state='disabled')
 
 
 # clear the selected query and its listings
 def clear_one_query():
+    archive_box.configure(state='normal')
+    archive_box.delete('1.0', 'end')
     if query_select.current() != 0:
         selected_query_id = query_select.get()[:query_select.get().find(",")]
         cursor.execute('''DELETE from queries WHERE id=?; ''', [selected_query_id])
@@ -203,13 +209,17 @@ def clear_one_query():
         query_connection.commit()
         query_list.pop(query_select.current())
         query_select['values'] = query_list
-        query_select.current(0)
     else:
         archive_box.insert(END, "You must select a query in order to clear one.\n")
+    archive_box.configure(state='disabled')
+    query_select.current(0)
 
 
 # delete all queries and listings
 def clear_all_queries():
+    archive_box.configure(state='normal')
+    archive_box.delete('1.0', 'end')
+    archive_box.configure(state='disabled')
     listing_cursor.execute('''DELETE FROM listings;''')
     cursor.execute('''DELETE FROM queries;''')
     global last_listing, query_list
