@@ -212,8 +212,9 @@ def clear_one_query():
 def clear_all_queries():
     listing_cursor.execute('''DELETE FROM listings;''')
     cursor.execute('''DELETE FROM queries;''')
-    global last_listing
+    global last_listing, query_list
     last_listing = 0
+    query_list.clear()
     query_list = [default_query]
     query_select['values'] = query_list
     query_select.current(0)
@@ -271,6 +272,7 @@ def show_about():
     about_info = """    I am Vadim Torgashov and this is my 2020 senior capstone for BVU.\n
     This is made with the MIT License.\n
     If you want to see my other projects or get a dev version of this project that you can modify visit my Github:\n
+    https://github.com/torgvad\n
     \n\n
     Please read the README.txt if you haven't not read the instructions or cannot remember some of the intricacies.\n"""
     messagebox.showinfo("About", about_info)
@@ -333,9 +335,9 @@ def add_request():
 
 
 # Setting up the databases and TKinter
-query_connection= sqlite3.connect('data/queries.db')
+query_connection = sqlite3.connect('data/queries.db')
 cursor = query_connection.cursor()
-listing_connect= sqlite3.connect('data/listings.db')
+listing_connect = sqlite3.connect('data/listings.db')
 listing_cursor = listing_connect.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS queries (
                 id integer PRIMARY KEY,

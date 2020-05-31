@@ -137,6 +137,7 @@ def format_slash_url(url, slash_link):
 
 # format ebay's "new listing" results
 def format_ebay_new_listing(filtered_listing, unfiltered_listing):
+    #listing: name, bid, shipping_cost, current_price, buy_now_price, min_bid, seller_name, link, bid_end, extra
     if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
         element = str(unfiltered_listing[0])
         span_index = element.index("/span>")
@@ -183,17 +184,6 @@ def custom_filter_controller(retailer, filtered_listing, unfiltered_listing):
             return filtered_listing
     except:
         return filtered_listing
-
-'''
-# if the site requires special formatting it gets sent to a function to format it
-def custom_filter_controller(site, formatted_item, original_item):
-    switch = {
-        "Ebay": format_ebay_new_listing,
-        "Goodwill": format_goodwill_listing
-    }
-    if site in switch:
-        return switch[site](formatted_item, original_item)
-    return formatted_item'''
 
 
 # find the href assignment
@@ -431,7 +421,6 @@ def run_scrape(query, webstyle, url, website):
             res = requests.get(url, headers=default_header)
             break
     soup = BeautifulSoup(res.text, 'html.parser')
-    #all_listing_elements = []
     all_listings = get_every_listing(soup, webstyle)
     return get_listings(all_listings, webstyle, url, query, website)
 
@@ -530,8 +519,6 @@ class custom_Goodwill_formatting(custom_formatting):
         title = title[21:title.find("\r")]
         listing[0] = title
         date = listing[4]
-        print(date)
-        print(len(date))
         if len(date) > 0:
             date = date[:date.find(' ')]
             slash1 = date.find('/')
@@ -563,19 +550,6 @@ def last_minute_formatting(listing, retailer):
     except:
 
         return listing
-
-'''
-# controller for special listing formatting
-def last_minute_formatting(listing, retailer):
-    switch = {
-        "Ebay": format_ebay_end_date,
-        "Property Room": format_property_room,
-        "Goodwill": format_goodwill
-    }
-    if retailer in switch:
-        return switch[retailer](listing)
-    else:
-        return listing '''
 
 
 # take the listings and their corresponding query_id and add them to the listings.db
