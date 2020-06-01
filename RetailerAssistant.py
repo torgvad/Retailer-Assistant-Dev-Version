@@ -344,6 +344,24 @@ def add_request():
     listing_box.configure(state='disabled')
 
 
+def first_login_pop_up():
+    welcome_info = """    Welcome to the Online Retailer Assistant. This appears to be your first time using the app.\n
+    Here are the feature of the program:\n
+    The searches tab is used to add new requests.\n
+    Simply type in your query, what website you want scraped, select the time interval, and fill in any additional filters.\n
+    Be careful with the time interval as excessive results will trigger the program to delete that query.\n
+    Seperate words/phrases put in the Exclude field with commas or else the program will interpret what you typed as one continuous phrase.\n
+    The large textbox will automatically be populated with new queries which you can click to go to that item's page.\n\n\n
+    The queries and data tab allows you to look at existing queries and see what items have already been scraped for it.\n
+    Here you can check what queries are being searched for, the item listings for those queries,\n
+    Save item listings to a .txt file, or just look at what listings have been scraped\n
+    Like the previous tab the items in the large textbox are clickable.\n
+    If you need to refer to this intro again click on the "About" button on the bottom left of the window.
+    """
+    messagebox.showinfo("Welcome", welcome_info)
+
+
+
 # Setting up the databases and TKinter
 query_connection = sqlite3.connect('data/queries.db')
 cursor = query_connection.cursor()
@@ -503,6 +521,18 @@ save_archive_button.place(x=200, y=100)
 # Display all archived data
 display_all_button = Button(queries_tab, text="Display all archives", command=lambda: display_all_archives())
 display_all_button.place(x=550, y=100)
+
+
+try:
+    start_file = open('data/first.txt', 'r')
+    start_file.read()
+    start_file.close()
+except:
+    start_file = open('data/first.txt', 'w+')
+    start_file.close()
+    first_login_pop_up()
+
+
 
 restart_scraper()
 threading.Thread(target=timed_checker, daemon=True).start()
