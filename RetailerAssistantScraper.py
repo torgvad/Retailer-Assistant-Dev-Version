@@ -17,12 +17,10 @@ from requests.exceptions import ProxyError
 
 total_sleeps = 0
 latest_query_id = 0
-thirty_min_queries = []
-sixty_min_queries = []
-two_hour_queries = []
 webstyles = {}
-sleep_time = 1800
+sleep_time = 10
 scraped_queries = []
+# the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
 
 default_header = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36', }
@@ -31,12 +29,14 @@ current_header = {"User-Agent": "Mozilla/5.0 (X11; U; Linux x86_64; en-US) Apple
 first_proxy = FreeProxy(country_id=['US']).get()
 current_proxy = {"http": first_proxy, }
 
-class custom_formatting:
+
+class CustomFormatting:
     @staticmethod
     def format(listing):
         return listing
 
-class custom_filter:
+
+class CustomFilter:
     @staticmethod
     def filter(filtered_listing, unfiltered_listing):
         return filtered_listing
@@ -146,7 +146,8 @@ def format_ebay_new_listing(filtered_listing, unfiltered_listing):
         filtered_listing[0] = element[:h3_index]
     return filtered_listing
 
-class custom_Goodwill_filter(custom_filter):
+
+class custom_Goodwill_filter(CustomFilter):
     @staticmethod
     def filter(filtered_listing, unfiltered_listing):
         date = str(unfiltered_listing[4])
@@ -154,8 +155,9 @@ class custom_Goodwill_filter(custom_filter):
         date = date[:date.find('>') - 1]
         filtered_listing[4] = date
         return filtered_listing
-    
-class custom_Ebay_filter(custom_filter):
+
+
+class custom_Ebay_filter(CustomFilter):
     @staticmethod
     def filter(filtered_listing, unfiltered_listing):
         if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
@@ -165,7 +167,8 @@ class custom_Ebay_filter(custom_filter):
             h3_index = element.index("</h3")
             filtered_listing[0] = element[:h3_index]
         return filtered_listing
-    
+
+
 # trim data inside element that stores bid end
 def format_goodwill_listing(formatted_item, original_item):
     date = str(original_item[4])
@@ -175,10 +178,11 @@ def format_goodwill_listing(formatted_item, original_item):
     return formatted_item
 
 
-def custom_filter_controller(retailer, filtered_listing, unfiltered_listing):
+# call the user-made subclass of CustomFilter if one exists
+def CustomFilter_controller(retailer, filtered_listing, unfiltered_listing):
     retailer = retailer.replace(" ", "_")
     try:
-        if issubclass(eval("custom_"+retailer+"_filter"), custom_filter):
+        if issubclass(eval("custom_"+retailer+"_filter"), CustomFilter):
             return eval("custom_" + retailer + "_filter").filter(filtered_listing, unfiltered_listing)
         else:
             return filtered_listing
@@ -207,6 +211,7 @@ def format_number(number_element):
             formatted_str, start_new_index = format_text_in_element(number_element)
         if len(formatted_str) == 0:
             return 'ex'
+        formatted_str = formatted_str.replace(",", "")
         number_element = int(re.search(r'\d+', formatted_str).group())
     except:
         number_element = "ex"
@@ -238,7 +243,7 @@ def format_elements(element_list, url, website):
             else:
                 str_item = format_str_element(str_item)
             formatted_list[i] = str_item
-    formatted_list = custom_filter_controller(website, formatted_list, element_list)
+    formatted_list = CustomFilter_controller(website, formatted_list, element_list)
     return formatted_list
 
 
@@ -260,11 +265,13 @@ def format_text_in_element(str_item):
     return str_item, element_name_end
 
 
+# add the list of queries to their proper place in the data structure (line 23)
 def add_queries_to_dict(new_queries, queries_cursor):
     global latest_query_id
     for query in new_queries:
         intermediate_list = list(query)
         intermediate_list[3] = create_exclude_list(query[3])
+        query = intermediate_list
         try:
             queries[query[2]][query[7]].append(query)
         except:
@@ -277,6 +284,7 @@ def add_queries_to_dict(new_queries, queries_cursor):
     latest_query_id = queries_cursor.execute('''SELECT MAX(id) from queries;''').fetchone()[0]
 
 
+# get all queries that exist and add them to the query data structure (line 23)
 def check_queries():
     global latest_query_id, queries
     new_queries = queries_cursor.execute('''SELECT * from queries;''').fetchall()
@@ -355,19 +363,19 @@ def create_exclude_list(exclude_string):
     if exclude_string.find(',') == -1:
         return [exclude_string]
     comma_list = [i.start() for i in re.finditer(",", exclude_string)]
-    exclude_list = [exclude_string[:comma_list[0]], exclude_string[comma_list[len(comma_list) - 1] + 1:]]
+    exclude_list = [(exclude_string[:comma_list[0]]).strip(), (exclude_string[comma_list[len(comma_list) - 1] + 1:]).strip()]
     for i in range(0, len(comma_list) - 1):
         if i != len(comma_list) - 1:
-            exclude_list.append(exclude_string[comma_list[i] + 1:comma_list[i + 1]])
+            exclude_list.append((exclude_string[comma_list[i] + 1:comma_list[i + 1]]).strip())
     return exclude_list
 
 
 # will filter list based on query list, returns false if any of the elements fail
 def filter_results(listing_elements, query):
     for exclude in query[3]:
-        if exclude.isspace() == False:
+        if len(exclude) == 0:
             break
-        if exclude in listing_elements[0]:
+        if exclude.lower() in listing_elements[0].lower():
             return False
     if listing_elements[1] != "ex" and (int(listing_elements[1]) < query[4] or int(listing_elements[1]) > query[5]):
         return False
@@ -391,6 +399,7 @@ def check_id_existance(id):
         return False
 
 
+# get all the elements in the listings, filter them, and return them
 def get_listings(all_listings, webstyle, url, query, website):
     all_listing_elements = []
     for listing in all_listings:
@@ -479,7 +488,8 @@ def format_goodwill(listing):
         listing[1] = 'ex'
     return listing
 
-class custom_Ebay_formatting(custom_formatting):
+
+class custom_Ebay_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
         if listing[9] != "ex":
@@ -493,7 +503,7 @@ class custom_Ebay_formatting(custom_formatting):
         return listing
 
 
-class custom_Property_Room_formatting(custom_formatting):
+class custom_Property_Room_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
         time_left = listing[4]
@@ -511,7 +521,7 @@ class custom_Property_Room_formatting(custom_formatting):
         listing[4] = extended_date.strftime('%Y-%m-%d')
         return listing
 
-class custom_Goodwill_formatting(custom_formatting):
+class custom_Goodwill_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
         title = listing[0]
@@ -539,10 +549,11 @@ class custom_Goodwill_formatting(custom_formatting):
         return listing
 
 
+# use the user created subclass of CustomFormatting if one exists
 def last_minute_formatting(listing, retailer):
     retailer = retailer.replace(" ", "_")
     try:
-        if issubclass(eval("custom_"+retailer+"_formatting"), custom_formatting):
+        if issubclass(eval("custom_"+retailer+"_formatting"), CustomFormatting):
             return eval("custom_" + retailer + "_formatting").format(listing)
         else:
 
@@ -555,7 +566,7 @@ def last_minute_formatting(listing, retailer):
 # take the listings and their corresponding query_id and add them to the listings.db
 def add_listing_to_db(query_id, retailer, listings):
     for listing in listings:
-        db_match = cursor.execute("""SELECT * from listings where link=? and retailer=?;""", [listing[8], retailer]).fetchone()
+        db_match = cursor.execute("""SELECT * from listings where link=? and retailer=? and query_id=?;""", [listing[8], retailer, query_id]).fetchone()
         listing = last_minute_formatting(listing, retailer)
         if listing != False:
             if db_match == None:
@@ -597,8 +608,9 @@ def cycle_through_pages(query, webstyle):
         i += 1
 
 
-def initiate_scrapes_in_retailer_dict(queries_dict, scrape_time):
-    for query in queries_dict:
+# go through all the queries in the array and scrape them appropriately
+def initiate_scrapes_in_retailer_dict(queries, scrape_time):
+    for query in queries:
         if query[0] in scraped_queries:
             cycle_through_pages(query, webstyles[query[2]])
         else:
@@ -606,6 +618,7 @@ def initiate_scrapes_in_retailer_dict(queries_dict, scrape_time):
             scraped_queries.append(query[0])
 
 
+# given the dictionary with time:queryList key,val pairs scrape the ones that should be scraped now
 def cycle_through_retailers_dict(queries_dict):
     for scrape_time in queries_dict:
         if len(queries_dict[scrape_time]) > 0:
@@ -616,7 +629,8 @@ def cycle_through_retailers_dict(queries_dict):
                 initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 2)
 
 
-# match each request with webstyle
+# open threads to scrape each retailer in their own thread
+# this is the start of the scraping process
 def scrape():
     global total_sleeps
     while True:
