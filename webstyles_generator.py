@@ -18,11 +18,10 @@ else:
 
 test_search = "purse"
 
-
-website = "ex"
+website = 'ex'
+retailer_name = "ex"
 listing_html = "ex"
 listing_depth = 0
-retailer_name = "ex"
 title_html = "ex"
 title_depth = 0
 curr_bid_html = "ex"
@@ -35,6 +34,12 @@ bid_end_html = "ex"
 bid_end_depth = 0
 seller_html = "ex"
 seller_depth = 0
+buy_now_price_html = "ex"
+buy_now_price_depth = 0
+min_bid_html = "ex"
+min_bid_depth = 0
+link_html = "ex"
+link_depth = 0
 extra_html = "ex"
 extra_depth = 0
 
