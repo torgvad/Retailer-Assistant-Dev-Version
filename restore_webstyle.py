@@ -47,7 +47,7 @@ def restore_ebay():
 
 
 def restore_goodwill():
-    website = 'https://www.shopgoodwill.com/Listings?st=purse&sg=&c=&s=&lp=0&hp=999999&sbn=False&spo=False&snpo=False&socs=False&sd=False&sca=False&cadb=7&scs=False&sis=False&col=1&p=3&ps=40&desc=True&ss=0&UseBuyerPrefs=true'
+    website = 'https://www.shopgoodwill.com/Listings?st=%s&sg=&c=&s=&lp=0&hp=999999&sbn=False&spo=False&snpo=False&socs=False&sd=False&sca=False&cadb=7&scs=False&sis=False&col=1&p=%d&ps=40&desc=True&ss=0&UseBuyerPrefs=true'
     retailer_name = "Goodwill"
     listing_html = "li,class:widget"
     listing_depth = 0

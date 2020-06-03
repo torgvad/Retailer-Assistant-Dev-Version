@@ -63,6 +63,8 @@ def get_new_header_and_proxy():
 # take url and insert query and page number
 def format_url(link, query):
     page_number_loc = link.find("%d")
+    link = str(link)
+    query[1] = str(query[1])
     if page_number_loc == -1:
         return link % (query[1])
     if link.find("%s") < page_number_loc:
@@ -392,7 +394,9 @@ def filter_results(listing_elements, query):
 
 # checks if id exists
 def check_id_existance(id):
-    id_check = queries_cursor.execute('''SELECT * from queries WHERE id=?;''', [id]).fetchone()
+    t_conn = sqlite3.connect('data/queries.db')
+    t_cursor = t_conn.cursor()
+    id_check = t_cursor.execute('''SELECT * from queries WHERE id=?;''', [id]).fetchone()
     if id_check != None:
         return True
     else:
@@ -565,12 +569,14 @@ def last_minute_formatting(listing, retailer):
 
 # take the listings and their corresponding query_id and add them to the listings.db
 def add_listing_to_db(query_id, retailer, listings):
+    t_conn = sqlite3.connect('data/listings.db')
+    t_cursor = t_conn.cursor()
     for listing in listings:
-        db_match = cursor.execute("""SELECT * from listings where link=? and retailer=? and query_id=?;""", [listing[8], retailer, query_id]).fetchone()
+        db_match = t_cursor.execute("""SELECT * from listings where link=? and retailer=? and query_id=?;""", [listing[8], retailer, query_id]).fetchone()
         listing = last_minute_formatting(listing, retailer)
         if listing != False:
             if db_match == None:
-                cursor.execute("""INSERT INTO listings
+                t_cursor.execute("""INSERT INTO listings
                                 (query_id, retailer, name, bid, shipping_cost, current_price, 
                                 bid_end, seller_name, buy_now_price, min_bid, link, extra)
                                 VALUES
@@ -578,9 +584,9 @@ def add_listing_to_db(query_id, retailer, listings):
                                [query_id, retailer, listing[0], listing[1], listing[2], listing[3],
                                 listing[4], listing[5], listing[6], listing[7], listing[8], listing[9]])
             else:
-                conn.commit()
+                t_conn.commit()
                 return False
-    conn.commit()
+    t_conn.commit()
     return True
 
 
@@ -636,10 +642,11 @@ def scrape():
     while True:
         time.sleep(sleep_time)
         get_new_header_and_proxy()
-        total_sleeps += 1
         for retailer_list in queries:
-            cycle_through_retailers_dict(queries[retailer_list])
-        total_sleeps += 1
+            threading.Thread(target=cycle_through_retailers_dict, args=(queries[retailer_list],), daemon=True).start()
+            total_sleeps += 1
+            if total_sleeps > 4:
+                total_sleeps = 0
 
 
 conn = sqlite3.connect('data/listings.db')

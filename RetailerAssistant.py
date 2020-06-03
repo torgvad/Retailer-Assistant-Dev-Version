@@ -36,9 +36,9 @@ def kill_scraper():
             if process_name.lower() in proc.name().lower():
                 proc.kill()
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                listing_box.insert(END, "Scraper is already not running.\n")
+                messagebox.showinfo("Scraper already dead", "Scraper is already not running.\n")
         except:
-            listing_box.insert(END, "Scraper is already not running.\n")
+            messagebox.showinfo("Scraper already dead", "Scraper is already not running.\n")
     if check_scraper_status():
         scraper_check_label['text'] = "Scraper is online"
     else:
@@ -51,7 +51,7 @@ def restart_scraper():
         try:
             os.startfile("RetailerAssistantScraper.exe")
         except:
-            listing_box.insert(END, "Scraper missing. You will have to redownload it.\n")
+            messagebox.showinfo("Scraper missing", "Scraper missing. You will have to redownload it.\n")
     if check_scraper_status():
         scraper_check_label['text'] = "Scraper is online"
     else:
@@ -194,7 +194,7 @@ def clear_one_archive():
         listing_connect.commit()
         last_listing = listing_cursor.execute('''SELECT MAX(id) from listings;''').fetchone()[0]
     else:
-        archive_box.insert(END, "You must select a query in order to clear its archives.\n")
+        messagebox.showinfo("Select query", "You must select a query in order to clear its archives.\n")
     archive_box.configure(state='disabled')
 
 
@@ -210,7 +210,7 @@ def clear_one_query():
         query_list.pop(query_select.current())
         query_select['values'] = query_list
     else:
-        archive_box.insert(END, "You must select a query in order to clear one.\n")
+        messagebox.showinfo("Select query", "You must select a query in order to clear one.\n")
     archive_box.configure(state='disabled')
     query_select.current(0)
 
@@ -307,28 +307,45 @@ def convert_to_txt():
             txt_file.write("\n\n")
         txt_file.close()
     else:
-        archive_box.insert(END, "Please select a query from the list\n")
+        messagebox.showinfo("Query no selected", "Please select a query from the list\n")
 
+
+def check_filter_options():
+    if len(min_price_entry.get()) > 0:
+        min_price = int(min_price_entry.get())
+    else:
+        min_price = 0
+    if len(max_price_entry.get()) > 0:
+        max_price = int(max_price_entry.get())
+    else:
+        max_price = 5000000000000
+    if len(max_shipping_entry.get()) > 0:
+        max_ship = int(max_shipping_entry.get())
+    else:
+        max_ship = 5000000000000
+    return [min_price, max_price, max_ship]
 
 # add query to the queries database
 def add_request():
     global first_scrape_completed
     listing_box.configure(state='normal')
     if len(cursor.execute('''SELECT * FROM queries WHERE retailer=?;''', [retail_select.get()]).fetchall()) > 25:
-        listing_box.insert(END, "You have too many queries for this website, delete some.\n")
+        messagebox.showinfo("Excess queries", "You have too many queries for this website, delete some.\n")
         listing_box.configure(state='disabled')
     else:
         # make sure the search bar isn't empty and that the retailer_select and time_interval comboboxes aren't on the default values
         if (min_price_entry.get()).isdigit() == False or (max_price_entry.get()).isdigit() == False or (max_shipping_entry.get()).isdigit() == False:
-            listing_box.insert(END, "Max shipping cost, minimum price, and maximum price must be only whole numbers\n")
+            if len(min_price_entry.get()) > 0 or len(max_price_entry.get()) > 0 or len(max_shipping_entry.get()) > 0:
+                messagebox.showinfo("Not using whole numbers",  "Max shipping cost, minimum price, and maximum price must be only whole numbers\n")
         else:
             if len(search_entry.get()) != 0 and retail_select.get() != default_retailer and time_interval_select.get() != default_time:
+                filter_options = check_filter_options()
                 cursor.execute('''INSERT INTO queries
                                 (search, retailer, exclude, min_price, max_price, shipping, time)
                                 VALUES
                                 (?, ?, ?, ?, ?, ?, ?);''',
                                 [search_entry.get(), retail_select.get(), exclude_entry.get(),
-                                   int(min_price_entry.get()), int(max_price_entry.get()), int(max_shipping_entry.get()), int(time_interval_select.get()[:2])])
+                                   filter_options[0], filter_options[1], filter_options[2], int(time_interval_select.get()[:2])])
                 everything = cursor.execute(''' SELECT * from queries; ''').fetchall()
                 # take the newly added listing and add it to the query_list with its ID
                 cursor.execute('SELECT max(id) FROM queries')
@@ -340,7 +357,7 @@ def add_request():
                 first_scrape_completed[int(cursor.lastrowid)] = 0
                 query_connection.commit()
             else:
-                listing_box.insert(END, "A Search, Retailer, and Time Interval must be specified\n")
+                messagebox.showinfo("Not all fields filled", "A Search, Retailer, and Time Interval must be specified\n")
     listing_box.configure(state='disabled')
 
 
@@ -400,6 +417,7 @@ else:
     last_listing = listing_cursor.execute('''SELECT MAX(id) from listings;''').fetchone()[0]
 
 master = Tk()
+master.title("Online Retailer Assistant")
 master.geometry("935x660")
 search_text = "Searches Tab"
 queries_text = "Queries and Data Tab"
@@ -408,8 +426,19 @@ queries_text = "Queries and Data Tab"
 queries = cursor.execute(''' SELECT * from queries; ''').fetchall()
 for query in queries:
     # its appending each query's search, retailer, word exclusion, min price, max price, and shipping cost (in order)
-    query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ",price:$" +
-                        str(query[4]) + "-" + str(query[5]) + ",max shipping:$" + str(query[6]))
+    if str(query[5]) == "5000000000000":
+        if str(query[6]) == "5000000000000":
+            query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
+                                str(query[4]))
+        else:
+            query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
+                              str(query[4]) + ",max shipping:$" + str(query[6]))
+    elif str(query[6]) == "5000000000000":
+        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
+                          str(query[4]) + ",max shipping:$" + str(query[6]))
+    else:
+        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ",price:$" +
+                            str(query[4]) + "-" + str(query[5]) + ",max shipping:$" + str(query[6]))
 
 all_queries = cursor.execute('''SELECT DISTINCT id from queries;''').fetchall()
 for query in queries:
