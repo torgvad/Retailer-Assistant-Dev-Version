@@ -160,7 +160,7 @@ def check_scraper_status():
             if process_name.lower() in proc.name().lower():
                 return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            return False
+            messagebox.showinfo("Scraper missing", "Scraper missing. You will have to redownload it.\n")
     return False
 
 
@@ -325,6 +325,30 @@ def check_filter_options():
         max_ship = 5000000000000
     return [min_price, max_price, max_ship]
 
+
+def process_request():
+    if len(search_entry.get()) != 0 and retail_select.get() != default_retailer and time_interval_select.get() != default_time:
+        filter_options = check_filter_options()
+        cursor.execute('''INSERT INTO queries
+                        (search, retailer, exclude, min_price, max_price, shipping, time)
+                        VALUES
+                        (?, ?, ?, ?, ?, ?, ?);''',
+                       [search_entry.get(), retail_select.get(), exclude_entry.get(),
+                        filter_options[0], filter_options[1], filter_options[2], int(time_interval_select.get()[:2])])
+        everything = cursor.execute(''' SELECT * from queries; ''').fetchall()
+        # take the newly added listing and add it to the query_list with its ID
+        cursor.execute('SELECT max(id) FROM queries')
+        max_id = cursor.fetchone()[0]
+        new_query = (str(max_id), search_entry.get(), retail_select.get(), "exclude:" + exclude_entry.get(),
+                     "price:" + min_price_entry.get(), "-" + max_price_entry.get(),
+                     "max shipping:" + max_shipping_entry.get())
+        query_list.append(','.join(new_query))
+        query_select['values'] = query_list
+        first_scrape_completed[int(cursor.lastrowid)] = 0
+        query_connection.commit()
+    else:
+        messagebox.showinfo("Not all fields filled", "A Search, Retailer, and Time Interval must be specified\n")
+
 # add query to the queries database
 def add_request():
     global first_scrape_completed
@@ -333,31 +357,13 @@ def add_request():
         messagebox.showinfo("Excess queries", "You have too many queries for this website, delete some.\n")
         listing_box.configure(state='disabled')
     else:
-        # make sure the search bar isn't empty and that the retailer_select and time_interval comboboxes aren't on the default values
-        if (min_price_entry.get()).isdigit() == False or (max_price_entry.get()).isdigit() == False or (max_shipping_entry.get()).isdigit() == False:
-            if len(min_price_entry.get()) > 0 or len(max_price_entry.get()) > 0 or len(max_shipping_entry.get()) > 0:
-                messagebox.showinfo("Not using whole numbers",  "Max shipping cost, minimum price, and maximum price must be only whole numbers\n")
+        # make sure the price range and shipping cost are either empty or all have valid inputs
+        if (((min_price_entry.get()).isdigit() == False and len(min_price_entry.get()) > 0) or
+                ((max_price_entry.get()).isdigit() == False and len(max_price_entry.get()) > 0) or
+                ((max_shipping_entry.get()).isdigit() == False and len(max_shipping_entry.get()) > 0)):
+            messagebox.showinfo("Not using whole numbers",  "Max shipping cost, minimum price, and maximum price must be only whole numbers\n")
         else:
-            if len(search_entry.get()) != 0 and retail_select.get() != default_retailer and time_interval_select.get() != default_time:
-                filter_options = check_filter_options()
-                cursor.execute('''INSERT INTO queries
-                                (search, retailer, exclude, min_price, max_price, shipping, time)
-                                VALUES
-                                (?, ?, ?, ?, ?, ?, ?);''',
-                                [search_entry.get(), retail_select.get(), exclude_entry.get(),
-                                   filter_options[0], filter_options[1], filter_options[2], int(time_interval_select.get()[:2])])
-                everything = cursor.execute(''' SELECT * from queries; ''').fetchall()
-                # take the newly added listing and add it to the query_list with its ID
-                cursor.execute('SELECT max(id) FROM queries')
-                max_id = cursor.fetchone()[0]
-                new_query = (str(max_id), search_entry.get(), retail_select.get(), "exclude:" + exclude_entry.get(),
-                            "price:" + min_price_entry.get(), "-" + max_price_entry.get(), "max shipping:" + max_shipping_entry.get())
-                query_list.append(','.join(new_query))
-                query_select['values'] = query_list
-                first_scrape_completed[int(cursor.lastrowid)] = 0
-                query_connection.commit()
-            else:
-                messagebox.showinfo("Not all fields filled", "A Search, Retailer, and Time Interval must be specified\n")
+            process_request()
     listing_box.configure(state='disabled')
 
 
