@@ -17,7 +17,7 @@ def restore_ebay():
     shipping_depth = 0
     price_html = "span,class:s-item__price"
     price_depth = 0
-    bid_end_html = "ex"
+    bid_end_html = "span,class:s-item__time-left"
     bid_end_depth = 0
     seller_html = "span,class:s-item__seller-info-text"
     seller_depth = 0

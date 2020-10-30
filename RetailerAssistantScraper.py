@@ -8,6 +8,7 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from datetime import date
 from datetime import timedelta
+from datetime import datetime
 import datetime
 import bs4
 import random
@@ -18,7 +19,7 @@ from requests.exceptions import ProxyError
 total_sleeps = 0
 latest_query_id = 0
 webstyles = {}
-sleep_time = 1800
+sleep_time = 10
 scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
@@ -496,14 +497,30 @@ def format_goodwill(listing):
 class custom_Ebay_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
+        print(listing)
+        print(listing[4])
+        extended_date = date.today()
+        print(datetime.datetime.now().hour)
+        print('before')
+        if listing[4] != "ex":
+            print("in?")
+            time_left = listing[4][:listing[4].find(" ")]
+            print('in')
+            if "d" in time_left:
+                extended_date += timedelta(days=int(time_left[:time_left.find("d")]))
+                if "h" in listing[4] and int(listing[4][listing[4].find(" ")+1:listing[4].find("h")]) + datetime.datetime.now().hour >= 24:
+                    extended_date += timedelta(days=1)
+            elif "h" in time_left:
+                if (int(time_left[:time_left.find("h")]) + datetime.datetime.now().hour) >= 24:
+                    extended_date += timedelta(days=1)
+            else:
+                if datetime.datetime.now().hour == 23 and (int(time_left[:time_left.find("m")]) + datetime.now().minute) >= 60:
+                    extended_date += timedelta(days=1)
+            print('exiting')
+            listing[4] = extended_date.strftime('%Y-%m-%d')
         if listing[9] != "ex":
             listing[1] = listing[3]
             listing[3] = "ex"
-            extended_date = date.today() + timedelta(days=7)
-            listing[4] = extended_date.strftime('%Y-%m-%d')
-        if listing[4] == "ex":
-            extended_date = date.today() + timedelta(days=30)
-            listing[4] = extended_date.strftime('%Y-%m-%d')
         return listing
 
 
@@ -560,7 +577,6 @@ def last_minute_formatting(listing, retailer):
         if issubclass(eval("custom_"+retailer+"_formatting"), CustomFormatting):
             return eval("custom_" + retailer + "_formatting").format(listing)
         else:
-
             return listing
     except:
 
@@ -640,6 +656,7 @@ def cycle_through_retailers_dict(queries_dict):
 def scrape():
     global total_sleeps
     while True:
+        print('doing....')
         time.sleep(sleep_time)
         get_new_header_and_proxy()
         for retailer_list in queries:
