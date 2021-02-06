@@ -279,12 +279,8 @@ def display_one_archive():
 
 
 def show_about():
-    about_info = """    I am Vadim Torgashov and this is my 2020 senior capstone for BVU.\n
-    This is made with the MIT License.\n
-    If you want to see my other projects or get a dev version of this project that you can modify visit my Github:\n
-    https://github.com/torgvad\n
-    \n\n
-    Please read the README.txt if you haven't not read the instructions or cannot remember some of the intricacies.\n"""
+    about_file = open("data/about.txt")
+    about_info = about_file.read()
     messagebox.showinfo("About", about_info)
 
 
@@ -368,19 +364,8 @@ def add_request():
 
 
 def first_login_pop_up():
-    welcome_info = """    Welcome to the Online Retailer Assistant. This appears to be your first time using the app.\n
-    Here are the feature of the program:\n
-    The searches tab is used to add new requests.\n
-    Simply type in your query, what website you want scraped, select the time interval, and fill in any additional filters.\n
-    Be careful with the time interval as excessive results will trigger the program to delete that query.\n
-    Seperate words/phrases put in the Exclude field with commas or else the program will interpret what you typed as one continuous phrase.\n
-    The large textbox will automatically be populated with new queries which you can click to go to that item's page.\n\n\n
-    The queries and data tab allows you to look at existing queries and see what items have already been scraped for it.\n
-    Here you can check what queries are being searched for, the item listings for those queries,\n
-    Save item listings to a .txt file, or just look at what listings have been scraped\n
-    Like the previous tab the items in the large textbox are clickable.\n
-    If you need to refer to this intro again click on the "About" button on the bottom left of the window.
-    """
+    welcome_file = open("data/welcome.txt", "r")
+    welcome_info = welcome_file.read()
     messagebox.showinfo("Welcome", welcome_info)
 
 
