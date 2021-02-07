@@ -287,8 +287,10 @@ def show_about():
 # the currently selected query will be added to a .txt in the same folder as the GUI .exe
 def convert_to_txt():
     if query_select.current() != 0:
-        txt_file = open("saved_archives.txt", "a+")
-        all_listings = listing_cursor.execute('''SELECT * FROM listings; ''').fetchall()
+        query_id = str(query_list[query_select.current()][:query_list[query_select.current()].find(',')])
+        file_name = "saved_archive_query#" + query_id + ".txt"
+        txt_file = open(file_name, "a+")
+        all_listings = listing_cursor.execute('''SELECT * FROM listings where query_id=?;''', (query_id)).fetchall()
         for listing in all_listings:
             # Writes these to file (in order):
                 # retailer, name, curr bid, shipping price, buy now price,
@@ -300,10 +302,11 @@ def convert_to_txt():
                 if str(listing[i]) != "ex" and i != 10:
                     txt_file.write(archive_printing.get(i) + str(listing[i]) + "\n")
                 i = i + 1
+            txt_file.write("Link:" + (listing[10]))
             txt_file.write("\n\n")
         txt_file.close()
     else:
-        messagebox.showinfo("Query no selected", "Please select a query from the list\n")
+        messagebox.showinfo("Query not selected", "Please select a query from the list\n")
 
 
 def check_filter_options():
