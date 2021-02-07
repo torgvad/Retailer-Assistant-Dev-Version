@@ -557,7 +557,7 @@ except:
 
 
 
-restart_scraper()
+threading.Thread(target=restart_scraper, daemon=True).start()
 threading.Thread(target=timed_checker, daemon=True).start()
 mainloop()
 
