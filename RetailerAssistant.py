@@ -348,6 +348,7 @@ def process_request():
     else:
         messagebox.showinfo("Not all fields filled", "A Search, Retailer, and Time Interval must be specified\n")
 
+
 # add query to the queries database
 def add_request():
     global first_scrape_completed
@@ -419,6 +420,7 @@ queries_text = "Queries and Data Tab"
 # Grab all existing queries to add to query_list to display in "Queries and Data" tab
 queries = cursor.execute(''' SELECT * from queries; ''').fetchall()
 for query in queries:
+    print(query)
     # its appending each query's search, retailer, word exclusion, min price, max price, and shipping cost (in order)
     if str(query[5]) == "5000000000000":
         if str(query[6]) == "5000000000000":
@@ -428,8 +430,8 @@ for query in queries:
             query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
                               str(query[4]) + ",max shipping:$" + str(query[6]))
     elif str(query[6]) == "5000000000000":
-        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
-                          str(query[4]) + ",max shipping:$" + str(query[6]))
+        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", price:$" +
+                          str(query[4]) + "-" + str(query[5]))
     else:
         query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ",price:$" +
                             str(query[4]) + "-" + str(query[5]) + ",max shipping:$" + str(query[6]))
@@ -554,8 +556,6 @@ except:
     start_file = open('data/first.txt', 'w+')
     start_file.close()
     first_login_pop_up()
-
-
 
 threading.Thread(target=restart_scraper, daemon=True).start()
 threading.Thread(target=timed_checker, daemon=True).start()
