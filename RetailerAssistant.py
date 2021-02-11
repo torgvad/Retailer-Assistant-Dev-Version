@@ -420,7 +420,6 @@ queries_text = "Queries and Data Tab"
 # Grab all existing queries to add to query_list to display in "Queries and Data" tab
 queries = cursor.execute(''' SELECT * from queries; ''').fetchall()
 for query in queries:
-    print(query)
     # its appending each query's search, retailer, word exclusion, min price, max price, and shipping cost (in order)
     if str(query[5]) == "5000000000000":
         if str(query[6]) == "5000000000000":
