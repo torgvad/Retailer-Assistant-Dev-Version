@@ -392,16 +392,15 @@ def get_listings(all_listings, webstyle, url, query, website):
 def run_scrape(query, webstyle, url, website):
     global current_header, current_proxy, default_header
     attempt_counter = 0
-    print(url)
     while True:
         time.sleep(2)
         try:
-            res = requests.get(url, headers= {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36(KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'}, proxies=current_proxy, timeout=6)
+            res = requests.get(url, headers=current_header, proxies=current_proxy, timeout=6)
             res.raise_for_status()
             if res.status_code == 404:
                 raise Exception
             break
-        except ProxyError:
+        except:
             get_new_header_and_proxy()
         attempt_counter += 1
         if attempt_counter >= 20:
@@ -570,12 +569,8 @@ def initiate_scrapes_in_retailer_dict(queries):
     global scraped_queries
     for query in queries:
         if query[0] in scraped_queries:
-            print(query)
-            print("not first time")
             cycle_through_pages(query, webstyles[query[2]])
         else:
-            print(query)
-            print("first time")
             initial_scrape_new_listing(query)
             scraped_queries.append(query[0])
 
@@ -595,9 +590,7 @@ def cycle_through_retailers_dict(queries_dict, sleeps):
 def scrape():
     global total_sleeps
     while True:
-        print(queries["Ebay"])
         time.sleep(sleep_time)
-        print('\nstarting.............................................................................................\n')
         get_new_header_and_proxy()
         for retailer_list in queries:
             threading.Thread(target=cycle_through_retailers_dict, args=(queries[retailer_list], total_sleeps), daemon=True).start()
