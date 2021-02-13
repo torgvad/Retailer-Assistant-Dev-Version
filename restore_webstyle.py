@@ -5,7 +5,7 @@ cursor = conn.cursor()
 
 
 def restore_ebay():
-    website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&_pgn=%d'
+    website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&_sop=10&_ipg=200&_pgn=%d'
     retailer_name = "Ebay"
     listing_html = "li,class:s-item"
     listing_depth = 0
