@@ -279,35 +279,34 @@ def display_one_archive():
 
 
 def show_about():
-    about_info = """    I am Vadim Torgashov and this is my 2020 senior capstone for BVU.\n
-    This is made with the MIT License.\n
-    If you want to see my other projects or get a dev version of this project that you can modify visit my Github:\n
-    https://github.com/torgvad\n
-    \n\n
-    Please read the README.txt if you haven't not read the instructions or cannot remember some of the intricacies.\n"""
+    about_file = open("data/about.txt")
+    about_info = about_file.read()
     messagebox.showinfo("About", about_info)
 
 
 # the currently selected query will be added to a .txt in the same folder as the GUI .exe
 def convert_to_txt():
     if query_select.current() != 0:
-        txt_file = open("saved_archives.txt", "a+")
-        all_listings = listing_cursor.execute('''SELECT * FROM listings; ''').fetchall()
+        query_id = str(query_list[query_select.current()][:query_list[query_select.current()].find(',')])
+        file_name = "saved_archive_query#" + query_id + ".txt"
+        txt_file = open(file_name, "a+", encoding='utf8')
+        all_listings = listing_cursor.execute('''SELECT * FROM listings where query_id=?;''', (query_id)).fetchall()
         for listing in all_listings:
             # Writes these to file (in order):
                 # retailer, name, curr bid, shipping price, buy now price,
                 # min bid, seller name, link, bid ending, extra
             txt_file.write("Item:\n")
-            txt_file.write("Name: " + listing[3] + "\n")
+            txt_file.write("Name: " + str(listing[3]) + "\n")
             i = 4
             while i < 13:
                 if str(listing[i]) != "ex" and i != 10:
                     txt_file.write(archive_printing.get(i) + str(listing[i]) + "\n")
                 i = i + 1
+            txt_file.write("Link:" + (listing[10]))
             txt_file.write("\n\n")
         txt_file.close()
     else:
-        messagebox.showinfo("Query no selected", "Please select a query from the list\n")
+        messagebox.showinfo("Query not selected", "Please select a query from the list\n")
 
 
 def check_filter_options():
@@ -349,6 +348,7 @@ def process_request():
     else:
         messagebox.showinfo("Not all fields filled", "A Search, Retailer, and Time Interval must be specified\n")
 
+
 # add query to the queries database
 def add_request():
     global first_scrape_completed
@@ -368,19 +368,8 @@ def add_request():
 
 
 def first_login_pop_up():
-    welcome_info = """    Welcome to the Online Retailer Assistant. This appears to be your first time using the app.\n
-    Here are the feature of the program:\n
-    The searches tab is used to add new requests.\n
-    Simply type in your query, what website you want scraped, select the time interval, and fill in any additional filters.\n
-    Be careful with the time interval as excessive results will trigger the program to delete that query.\n
-    Seperate words/phrases put in the Exclude field with commas or else the program will interpret what you typed as one continuous phrase.\n
-    The large textbox will automatically be populated with new queries which you can click to go to that item's page.\n\n\n
-    The queries and data tab allows you to look at existing queries and see what items have already been scraped for it.\n
-    Here you can check what queries are being searched for, the item listings for those queries,\n
-    Save item listings to a .txt file, or just look at what listings have been scraped\n
-    Like the previous tab the items in the large textbox are clickable.\n
-    If you need to refer to this intro again click on the "About" button on the bottom left of the window.
-    """
+    welcome_file = open("data/welcome.txt", "r")
+    welcome_info = welcome_file.read()
     messagebox.showinfo("Welcome", welcome_info)
 
 
@@ -440,8 +429,8 @@ for query in queries:
             query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
                               str(query[4]) + ",max shipping:$" + str(query[6]))
     elif str(query[6]) == "5000000000000":
-        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", min price:$" +
-                          str(query[4]) + ",max shipping:$" + str(query[6]))
+        query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ", price:$" +
+                          str(query[4]) + "-" + str(query[5]))
     else:
         query_list.append(str(query[0]) + "," + ','.join(query[1:3]) + ", exclude:" + query[3] + ",price:$" +
                             str(query[4]) + "-" + str(query[5]) + ",max shipping:$" + str(query[6]))
@@ -567,9 +556,7 @@ except:
     start_file.close()
     first_login_pop_up()
 
-
-
-restart_scraper()
+threading.Thread(target=restart_scraper, daemon=True).start()
 threading.Thread(target=timed_checker, daemon=True).start()
 mainloop()
 
