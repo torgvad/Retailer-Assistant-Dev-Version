@@ -46,20 +46,20 @@ def restore_ebay():
     conn.commit()
 
 
-def restore_goodwill():
-    website = 'https://www.shopgoodwill.com/Listings?st=%s&sg=&c=&s=&lp=0&hp=999999&sbn=False&spo=False&snpo=False&socs=False&sd=False&sca=False&cadb=7&scs=False&sis=False&col=1&p=%d&ps=40&desc=True&ss=0&UseBuyerPrefs=true'
-    retailer_name = "Goodwill"
-    listing_html = "li,class:widget"
+def restore_rubylane():
+    website = 'https://www.rubylane.com/ni/search?ipp=180&page=%d&q=%s&sort=newest&style=3'
+    retailer_name = "Rubylane"
+    listing_html = "div,class:settings-group"
     listing_depth = 0
-    title_html = "div,class:title"
+    title_html = "span,class:lvtitle"
     title_depth = 0
-    curr_bid_html = "div,class:price"
+    curr_bid_html = "ex"
     curr_bid_depth = 0
     shipping_html = "ex"
     shipping_depth = 0
-    price_html = "ex"
+    price_html = "div,class:lvprice text-xs-center"
     price_depth = 0
-    bid_end_html = "div,class:timer countdown product-countdown"
+    bid_end_html = "ex"
     bid_end_depth = 0
     seller_html = "ex"
     seller_depth = 0
@@ -67,9 +67,9 @@ def restore_goodwill():
     buy_now_price_depth = 0
     min_bid_html = "ex"
     min_bid_depth = 0
-    link_html = "a,class:product"
+    link_html = "a,style:padding: 10px 0;"
     link_depth = 0
-    extra_html = "span,class:small-text"
+    extra_html = "ex"
     extra_depth = 0
     cursor.execute(''' INSERT INTO webstyles
                     (retailer, website, listing_html, listing_depth, 
@@ -159,5 +159,5 @@ cursor.execute(''' CREATE TABLE IF NOT EXISTS webstyles (
 
 
 restore_ebay()
-restore_goodwill()
+restore_rubylane()
 restore_prop_room()

@@ -17,7 +17,6 @@ from requests.exceptions import ProxyError
 import fake_useragent
 
 
-
 total_sleeps = 1
 latest_query_id = 0
 webstyles = {}
@@ -26,11 +25,29 @@ scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
 
-default_header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36' }
+default_header = {
+    "Accept-Language": "en-US,en;q=0.5",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Accept-Encoding": "br, gzip, deflate",
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
+}
 
-current_header = {"User-Agent": "Mozilla/5.0 (X11; U; Linux x86_64; en-US) AppleWebKit/532.0 (KHTML, like Gecko) Chrome/4.0.208.0 Safari/532.0"}
+current_header = {
+    "Accept-Language": "en-US,en;q=0.5",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Accept-Encoding": "br, gzip, deflate",
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:90.0) Gecko/20100101 Firefox/90.0",
+}
 first_proxy = FreeProxy(country_id=['US']).get()
-current_proxy = {"https": first_proxy}
+current_proxy = {"http": first_proxy}
 
 
 class CustomFormatting:
@@ -51,7 +68,7 @@ def get_new_header_and_proxy():
     ua = fake_useragent.UserAgent(fallback='Chrome')
     ua.random == 'Chrome'
     current_header["User-Agent"] = ua.chrome
-    current_proxy["https"] = FreeProxy(country_id=['US']).get()
+    current_proxy["http"] = FreeProxy(country_id=['US']).get()
 
 
 # take url and insert query and page number
@@ -129,16 +146,6 @@ def format_slash_url(url, slash_link):
     url = url[:slash+8]
     url = url + slash_link
     return url
-
-
-class custom_Goodwill_filter(CustomFilter):
-    @staticmethod
-    def filter(filtered_listing, unfiltered_listing):
-        date = str(unfiltered_listing[4])
-        date = date[date.find('data-countdown') + 16:]
-        date = date[:date.find('>') - 1]
-        filtered_listing[4] = date
-        return filtered_listing
 
 
 class custom_Ebay_filter(CustomFilter):
@@ -411,30 +418,6 @@ def run_scrape(query, webstyle, url, website):
     return get_listings(all_listings, webstyle, url, query, website)
 
 
-# format bid end date and the junk found in title
-def format_goodwill(listing):
-    title = listing[0]
-    title = title[title.find("\n"):]
-    title = title[21:title.find("\r")]
-    listing[0] = title
-    date = listing[4]
-    date = date[:date.find(' ')]
-    slash1 = date.find('/')
-    slash2 = date[slash1 + 1:].find("/") + slash1 + 1
-    month = date[:slash1]
-    day = date[slash1 + 1:slash2]
-    year = date[slash2 + 1:]
-    if len(month) == 1:
-        month = "0" + month
-    if len(day) == 1:
-        day = "0" + day
-    listing[4] = year + "-" + month + "-" + day
-    if listing[9] == 'Buy It Now':
-        listing[3] = listing[1]
-        listing[1] = 'ex'
-    return listing
-
-
 class custom_Ebay_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
@@ -455,6 +438,8 @@ class custom_Ebay_formatting(CustomFormatting):
         if listing[9] != "ex":
             listing[1] = listing[3]
             listing[3] = "ex"
+        if 'Shop on eBay' in listing[0]:
+            return False
         return listing
 
 
@@ -474,33 +459,6 @@ class custom_Property_Room_formatting(CustomFormatting):
         else:
             return False
         listing[4] = extended_date.strftime('%Y-%m-%d')
-        return listing
-
-class custom_Goodwill_formatting(CustomFormatting):
-    @staticmethod
-    def format(listing):
-        title = listing[0]
-        title = title[title.find("\n"):]
-        title = title[21:title.find("\r")]
-        listing[0] = title
-        date = listing[4]
-        if len(date) > 0:
-            date = date[:date.find(' ')]
-            slash1 = date.find('/')
-            slash2 = date[slash1 + 1:].find("/") + slash1 + 1
-            month = date[:slash1]
-            day = date[slash1 + 1:slash2]
-            year = date[slash2 + 1:]
-            if len(month) == 1:
-                month = "0" + month
-            if len(day) == 1:
-                day = "0" + day
-            listing[4] = year + "-" + month + "-" + day
-        else:
-            listing[4] = "Stock Item"
-        if listing[9] == 'Buy It Now':
-            listing[3] = listing[1]
-            listing[1] = 'ex'
         return listing
 
 
