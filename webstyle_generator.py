@@ -5,9 +5,11 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import bs4
 import re
+from fp.fp import FreeProxy
+from requests.exceptions import ProxyError
 
+testing = True
 
-testing = False
 
 if testing == True:
     conn = sqlite3.connect('data/webstyles_test.db')
@@ -16,7 +18,7 @@ else:
     conn = sqlite3.connect('data/webstyles.db')
     cursor = conn.cursor()
 
-test_search = "purse"
+test_search = "watch"
 
 website = 'ex'
 retailer_name = "ex"
@@ -192,24 +194,32 @@ def format_elements(element_list, url, website):
 
 
 def format_link(link, search, page):
-    try:
-        page_number_loc = link.find("%d")
-    except:
+    page_number_loc = link.find("%d")
+    if page_number_loc == -1:
         return link % search
     search_loc = link.find("%s")
     if search_loc < page_number_loc:
         return link % (search, page)
     else:
-        return link.format(page, search)
+        return link % (page, search)
 
 def test(search, site):
     webstyle = cursor.execute('''SELECT * FROM webstyles WHERE retailer=?''', [site]).fetchone()
     url = format_link(webstyle[2], search, 1)
+    print(url)
+    first_proxy = FreeProxy(country_id=['US']).get()
+    current_proxy = {"http": first_proxy}
     header = {
+        "Accept-Language": "en-US,en;q=0.5",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "br, gzip, deflate",
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',
     }
-    print(url)
-    res = requests.get(url, headers=header)
+    res = requests.get(url, headers=header, proxies=current_proxy)
     res.raise_for_status()
     soup = BeautifulSoup(res.text, 'html.parser')
     listings = get_every_listing(soup, webstyle)
@@ -220,7 +230,7 @@ def test(search, site):
     for listing in all_listings:
         print(listing)
 
-#test(test_search, retailer_name)
+
 if testing == True:
     test(test_search, retailer_name)
     cursor.execute('''DROP TABLE webstyles;''')

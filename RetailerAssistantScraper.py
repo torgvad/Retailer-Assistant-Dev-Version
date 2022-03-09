@@ -8,14 +8,16 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from datetime import date
 from datetime import timedelta
+from datetime import datetime
 import datetime
 import bs4
 import random
 from fp.fp import FreeProxy
 from requests.exceptions import ProxyError
+import fake_useragent
 
 
-total_sleeps = 0
+total_sleeps = 1
 latest_query_id = 0
 webstyles = {}
 sleep_time = 1800
@@ -23,11 +25,29 @@ scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
 
-default_header = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36', }
+default_header = {
+    "Accept-Language": "en-US,en;q=0.5",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Accept-Encoding": "br, gzip, deflate",
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
+}
 
-current_header = {"User-Agent": "Mozilla/5.0 (X11; U; Linux x86_64; en-US) AppleWebKit/532.0 (KHTML, like Gecko) Chrome/4.0.208.0 Safari/532.0",}
+current_header = {
+    "Accept-Language": "en-US,en;q=0.5",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Accept-Encoding": "br, gzip, deflate",
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:90.0) Gecko/20100101 Firefox/90.0",
+}
 first_proxy = FreeProxy(country_id=['US']).get()
-current_proxy = {"http": first_proxy, }
+current_proxy = {"http": first_proxy}
 
 
 class CustomFormatting:
@@ -45,19 +65,10 @@ class CustomFilter:
 # use Freeproxy to get new proxy ip and port
 def get_new_header_and_proxy():
     global current_header, current_proxy
-    f = open("data/Chrome.txt", "r")
-    number = random.randint(0, 841)
-    i = 0
-    while i < number:
-        if i == number -1:
-            selected_header = f.readline()
-            current_header["User-Agent"] = selected_header[:len(selected_header) - 1]
-            break
-        else:
-            f.readline()
-        i += 1
+    ua = fake_useragent.UserAgent(fallback='Chrome')
+    ua.random == 'Chrome'
+    current_header["User-Agent"] = ua.chrome
     current_proxy["http"] = FreeProxy(country_id=['US']).get()
-    f.close()
 
 
 # take url and insert query and page number
@@ -137,28 +148,6 @@ def format_slash_url(url, slash_link):
     return url
 
 
-# format ebay's "new listing" results
-def format_ebay_new_listing(filtered_listing, unfiltered_listing):
-    #listing: name, bid, shipping_cost, current_price, buy_now_price, min_bid, seller_name, link, bid_end, extra
-    if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
-        element = str(unfiltered_listing[0])
-        span_index = element.index("/span>")
-        element = element[span_index+6:]
-        h3_index = element.index("</h3")
-        filtered_listing[0] = element[:h3_index]
-    return filtered_listing
-
-
-class custom_Goodwill_filter(CustomFilter):
-    @staticmethod
-    def filter(filtered_listing, unfiltered_listing):
-        date = str(unfiltered_listing[4])
-        date = date[date.find('data-countdown') + 16:]
-        date = date[:date.find('>') - 1]
-        filtered_listing[4] = date
-        return filtered_listing
-
-
 class custom_Ebay_filter(CustomFilter):
     @staticmethod
     def filter(filtered_listing, unfiltered_listing):
@@ -169,15 +158,6 @@ class custom_Ebay_filter(CustomFilter):
             h3_index = element.index("</h3")
             filtered_listing[0] = element[:h3_index]
         return filtered_listing
-
-
-# trim data inside element that stores bid end
-def format_goodwill_listing(formatted_item, original_item):
-    date = str(original_item[4])
-    date = date[date.find('data-countdown')+16:]
-    date = date[:date.find('>')-1]
-    formatted_item[4] = date
-    return formatted_item
 
 
 # call the user-made subclass of CustomFilter if one exists
@@ -420,14 +400,14 @@ def run_scrape(query, webstyle, url, website):
     global current_header, current_proxy, default_header
     attempt_counter = 0
     while True:
-        time.sleep(1)
+        time.sleep(2)
         try:
-            res = requests.get(url, headers=current_header, proxies=current_proxy)
+            res = requests.get(url, headers=current_header, proxies=current_proxy, timeout=6)
             res.raise_for_status()
             if res.status_code == 404:
                 raise Exception
             break
-        except ProxyError:
+        except:
             get_new_header_and_proxy()
         attempt_counter += 1
         if attempt_counter >= 20:
@@ -438,72 +418,28 @@ def run_scrape(query, webstyle, url, website):
     return get_listings(all_listings, webstyle, url, query, website)
 
 
-# format ebay bid end and move price to bid when a bid count is found
-def format_ebay_end_date(listing):
-    if listing[9] != "ex":
-        listing[1] = listing[3]
-        listing[3] = "ex"
-        extended_date = date.today() + timedelta(days=7)
-        listing[4] = extended_date.strftime('%Y-%m-%d')
-    if listing[4] == "ex":
-        extended_date = date.today() + timedelta(days=30)
-        listing[4] = extended_date.strftime('%Y-%m-%d')
-    return listing
-
-
-# format bid end date for property room listings
-def format_property_room(listing):
-    time_left = listing[4]
-    remaining_time = 0
-    try:
-        remaining_time = int(time_left[0])
-    except:
-        return False
-    if listing[4].find('d') != -1:
-        extended_date = date.today() + timedelta(days=remaining_time)
-    elif listing[4].find('h') != -1:
-        extended_date = date.today() + timedelta(hours=int(time_left[0:1]))
-    else:
-        return False
-    listing[4] = extended_date.strftime('%Y-%m-%d')
-    return listing
-
-
-# format bid end date and the junk found in title
-def format_goodwill(listing):
-    title = listing[0]
-    title = title[title.find("\n"):]
-    title = title[21:title.find("\r")]
-    listing[0] = title
-    date = listing[4]
-    date = date[:date.find(' ')]
-    slash1 = date.find('/')
-    slash2 = date[slash1 + 1:].find("/") + slash1 + 1
-    month = date[:slash1]
-    day = date[slash1 + 1:slash2]
-    year = date[slash2 + 1:]
-    if len(month) == 1:
-        month = "0" + month
-    if len(day) == 1:
-        day = "0" + day
-    listing[4] = year + "-" + month + "-" + day
-    if listing[9] == 'Buy It Now':
-        listing[3] = listing[1]
-        listing[1] = 'ex'
-    return listing
-
-
 class custom_Ebay_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
+        extended_date = date.today()
+        if listing[4] != "ex":
+            time_left = listing[4][:listing[4].find(" ")]
+            if "d" in time_left:
+                extended_date += timedelta(days=int(time_left[:time_left.find("d")]))
+                if "h" in listing[4] and int(listing[4][listing[4].find(" ")+1:listing[4].find("h")]) + datetime.datetime.now().hour >= 24:
+                    extended_date += timedelta(days=1)
+            elif "h" in time_left:
+                if (int(time_left[:time_left.find("h")]) + datetime.datetime.now().hour) >= 24:
+                    extended_date += timedelta(days=1)
+            else:
+                if datetime.datetime.now().hour == 23 and (int(time_left[:time_left.find("m")]) + datetime.now().minute) >= 60:
+                    extended_date += timedelta(days=1)
+            listing[4] = extended_date.strftime('%Y-%m-%d')
         if listing[9] != "ex":
             listing[1] = listing[3]
             listing[3] = "ex"
-            extended_date = date.today() + timedelta(days=7)
-            listing[4] = extended_date.strftime('%Y-%m-%d')
-        if listing[4] == "ex":
-            extended_date = date.today() + timedelta(days=30)
-            listing[4] = extended_date.strftime('%Y-%m-%d')
+        if 'Shop on eBay' in listing[0]:
+            return False
         return listing
 
 
@@ -525,33 +461,6 @@ class custom_Property_Room_formatting(CustomFormatting):
         listing[4] = extended_date.strftime('%Y-%m-%d')
         return listing
 
-class custom_Goodwill_formatting(CustomFormatting):
-    @staticmethod
-    def format(listing):
-        title = listing[0]
-        title = title[title.find("\n"):]
-        title = title[21:title.find("\r")]
-        listing[0] = title
-        date = listing[4]
-        if len(date) > 0:
-            date = date[:date.find(' ')]
-            slash1 = date.find('/')
-            slash2 = date[slash1 + 1:].find("/") + slash1 + 1
-            month = date[:slash1]
-            day = date[slash1 + 1:slash2]
-            year = date[slash2 + 1:]
-            if len(month) == 1:
-                month = "0" + month
-            if len(day) == 1:
-                day = "0" + day
-            listing[4] = year + "-" + month + "-" + day
-        else:
-            listing[4] = "Stock Item"
-        if listing[9] == 'Buy It Now':
-            listing[3] = listing[1]
-            listing[1] = 'ex'
-        return listing
-
 
 # use the user created subclass of CustomFormatting if one exists
 def last_minute_formatting(listing, retailer):
@@ -560,7 +469,6 @@ def last_minute_formatting(listing, retailer):
         if issubclass(eval("custom_"+retailer+"_formatting"), CustomFormatting):
             return eval("custom_" + retailer + "_formatting").format(listing)
         else:
-
             return listing
     except:
 
@@ -615,7 +523,8 @@ def cycle_through_pages(query, webstyle):
 
 
 # go through all the queries in the array and scrape them appropriately
-def initiate_scrapes_in_retailer_dict(queries, scrape_time):
+def initiate_scrapes_in_retailer_dict(queries):
+    global scraped_queries
     for query in queries:
         if query[0] in scraped_queries:
             cycle_through_pages(query, webstyles[query[2]])
@@ -624,15 +533,14 @@ def initiate_scrapes_in_retailer_dict(queries, scrape_time):
             scraped_queries.append(query[0])
 
 
-# given the dictionary with time:queryList key,val pairs scrape the ones that should be scraped now
-def cycle_through_retailers_dict(queries_dict):
-    for scrape_time in queries_dict:
-        if len(queries_dict[scrape_time]) > 0:
-            initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 30)
-            if total_sleeps == 2:
-                initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 1)
-            if total_sleeps >= 4:
-                initiate_scrapes_in_retailer_dict(queries_dict[scrape_time], 2)
+# given the dictionary with time:queryList pairs scrape the ones that should be scraped in this cycle
+def cycle_through_retailers_dict(queries_dict, sleeps):
+    initiate_scrapes_in_retailer_dict(queries_dict[30])
+    if sleeps == 2:
+        initiate_scrapes_in_retailer_dict(queries_dict[1])
+    elif sleeps >= 4:
+        initiate_scrapes_in_retailer_dict(queries_dict[2])
+        initiate_scrapes_in_retailer_dict(queries_dict[1])
 
 
 # open threads to scrape each retailer in their own thread
@@ -643,10 +551,11 @@ def scrape():
         time.sleep(sleep_time)
         get_new_header_and_proxy()
         for retailer_list in queries:
-            threading.Thread(target=cycle_through_retailers_dict, args=(queries[retailer_list],), daemon=True).start()
-            total_sleeps += 1
-            if total_sleeps > 4:
-                total_sleeps = 0
+            threading.Thread(target=cycle_through_retailers_dict, args=(queries[retailer_list], total_sleeps), daemon=True).start()
+        time.sleep(2)
+        total_sleeps += 1
+        if total_sleeps > 4:
+            total_sleeps = 1
 
 
 conn = sqlite3.connect('data/listings.db')

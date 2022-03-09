@@ -16,7 +16,7 @@ first_scrape_completed = {}
 default_retailer = "Retailer"
 default_time = "Time"
 default_query = "ID, search name, retailer, excluded, min and max price, max shipping"
-retailer_list = [default_retailer, "Property Room", "Ebay", "Goodwill"]
+retailer_list = [default_retailer, "Property Room", "Ebay", "Rubylane"]
 time_interval_list = [default_time, "30 min", "1 hour", "2 hour"]
 query_list = [default_query]
 current_selected_website = ''
@@ -78,8 +78,15 @@ def handle_excess_listings(query_id, thread_listing_cursor, thread_listing_conne
     threaded_query_connect.commit()
     thread_listing_cursor.execute('''DELETE from listings WHERE query_id=?; ''', [query_id])
     thread_listing_connect.commit()
-    error_message = "Query: " + query_list[query_id] + ".\n Is resulting in too many results. The query has been removed. Try more specific search terms.\n"
-    query_list.pop(query_id)
+    selected_query = ""
+    global first_scrape_completed
+    query_iterator = 0
+    for scraped_query in first_scrape_completed:
+        if str(scraped_query) == query_id:
+            break
+        query_iterator += 1
+    error_message = "Query: " + query_list[query_iterator] + ".\n Is resulting in too many results. The query has been removed. Try more specific search terms.\n"
+    query_list.pop(query_iterator)
     query_select['values'] = query_list
     messagebox.showerror("Excess results", error_message)
 
@@ -136,6 +143,8 @@ def fetch_listings(thread_listing_cursor, threaded_listing_connect):
     if len(new_listings) > 0:
         listing_box.configure(state='normal')
         for listing in new_listings:
+            if first_scrape_completed.get(listing[1]) == None:
+                first_scrape_completed[listing[1]] = 0
             try:
                 query_id_count[listing[1]] += 1
             except:
@@ -179,11 +188,15 @@ def timed_checker():
 
 # clear the listings of the currently selected query
 def clear_one_archive():
-    global query_list, archive_box, last_listing
+    global query_list, archive_box, last_listing, first_scrape_completed
     archive_box.configure(state='normal')
     if query_select.current() != 0:
         selected_query_id = query_select.get()[:query_select.get().find(",")]
         listing_count = listing_cursor.execute('''SELECT * FROM listings WHERE query_id=?;''', [selected_query_id]).fetchone()
+        try:
+            first_scrape_completed.pop(selected_query_id)
+        except:
+            pass
         archive_box.delete('1.0', 'end')
         if listing_count == None:
             archive_box.configure(state='disabled')
@@ -202,8 +215,13 @@ def clear_one_archive():
 def clear_one_query():
     archive_box.configure(state='normal')
     archive_box.delete('1.0', 'end')
+    global first_scrape_completed
     if query_select.current() != 0:
         selected_query_id = query_select.get()[:query_select.get().find(",")]
+        try:
+            first_scrape_completed.pop(selected_query_id)
+        except:
+            pass
         cursor.execute('''DELETE from queries WHERE id=?; ''', [selected_query_id])
         clear_one_archive()
         query_connection.commit()
@@ -222,7 +240,9 @@ def clear_all_queries():
     archive_box.configure(state='disabled')
     listing_cursor.execute('''DELETE FROM listings;''')
     cursor.execute('''DELETE FROM queries;''')
-    global last_listing, query_list
+    global last_listing, query_list, first_scrape_completed
+    first_scrape_completed = {}
+    create_first_scrape_dict()
     last_listing = 0
     query_list.clear()
     query_list = [default_query]
@@ -289,7 +309,7 @@ def convert_to_txt():
     if query_select.current() != 0:
         query_id = str(query_list[query_select.current()][:query_list[query_select.current()].find(',')])
         file_name = "saved_archive_query#" + query_id + ".txt"
-        txt_file = open(file_name, "a+", encoding='utf8')
+        txt_file = open(file_name, "a+")
         all_listings = listing_cursor.execute('''SELECT * FROM listings where query_id=?;''', (query_id)).fetchall()
         for listing in all_listings:
             # Writes these to file (in order):
@@ -526,15 +546,15 @@ query_select.bind("<<ComboboxSelected>>", lambda e: display_one_archive())
 query_select.current(0)
 
 # Clear queries button
-clear_queries_button = Button(queries_tab, text="Clear All Queries", command=lambda: clear_all_queries())
+clear_queries_button = Button(queries_tab, text="Delete All Queries", command=lambda: clear_all_queries())
 clear_queries_button.place(x=30, y=50)
 
 # Delete select query
-clear_selected_button = Button(queries_tab, text="Clear Selected Query", command=lambda: clear_one_query())
+clear_selected_button = Button(queries_tab, text="Delete Selected Query", command=lambda: clear_one_query())
 clear_selected_button.place(x=400, y=50)
 
 # Clear archive
-clear_archive_button = Button(queries_tab, text="Clear Only Query Archives", command=lambda: clear_one_archive())
+clear_archive_button = Button(queries_tab, text="Delete Query Listings", command=lambda: clear_one_archive())
 clear_archive_button.place(x=700, y=50)
 
 

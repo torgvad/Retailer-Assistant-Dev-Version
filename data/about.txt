@@ -1,0 +1,7 @@
+   I am Vadim Torgashov and this is my 2020 senior capstone for BVU.
+    This is made with the MIT License.
+    If you want to see my other projects or get a dev version of this project that you can modify visit my Github:
+    https://github.com/torgvad
+
+
+    Please read the README.txt if you haven't not read the instructions or cannot remember some of the intricacies.
