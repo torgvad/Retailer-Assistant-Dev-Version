@@ -316,7 +316,7 @@ def convert_to_txt():
                 # retailer, name, curr bid, shipping price, buy now price,
                 # min bid, seller name, link, bid ending, extra
             txt_file.write("Item:\n")
-            txt_file.write("Name: " + listing[3] + "\n")
+            txt_file.write("Name: " + str(listing[3]) + "\n")
             i = 4
             while i < 13:
                 if str(listing[i]) != "ex" and i != 10:
