@@ -68,7 +68,12 @@ def get_new_header_and_proxy():
     ua = fake_useragent.UserAgent(fallback='Chrome')
     ua.random == 'Chrome'
     current_header["User-Agent"] = ua.chrome
-    current_proxy["http"] = FreeProxy(country_id=['US']).get()
+    while True:
+        try:
+            current_proxy["http"] = FreeProxy(country_id=['US']).get()
+            break
+        except:
+            pass
 
 
 # take url and insert query and page number
