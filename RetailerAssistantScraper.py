@@ -20,7 +20,7 @@ import fake_useragent
 total_sleeps = 1
 latest_query_id = 0
 webstyles = {}
-sleep_time = 1800
+sleep_time = 180
 scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
@@ -68,7 +68,14 @@ def get_new_header_and_proxy():
     ua = fake_useragent.UserAgent(fallback='Chrome')
     ua.random == 'Chrome'
     current_header["User-Agent"] = ua.chrome
-    current_proxy["http"] = FreeProxy(country_id=['US']).get()
+    while True:
+        try:
+            current_proxy["http"] = FreeProxy(country_id=['US']).get()
+            print("got proxy")
+            break
+        except:
+            print("failed proxy")
+            pass
 
 
 # take url and insert query and page number
