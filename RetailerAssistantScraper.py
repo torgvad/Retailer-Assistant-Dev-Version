@@ -20,7 +20,7 @@ import fake_useragent
 total_sleeps = 1
 latest_query_id = 0
 webstyles = {}
-sleep_time = 180
+sleep_time = 1800
 scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
