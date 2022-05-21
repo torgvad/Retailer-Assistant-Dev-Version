@@ -71,10 +71,8 @@ def get_new_header_and_proxy():
     while True:
         try:
             current_proxy["http"] = FreeProxy(country_id=['US']).get()
-            print("got proxy")
             break
         except:
-            print("failed proxy")
             pass
 
 
