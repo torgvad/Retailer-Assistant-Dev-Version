@@ -122,16 +122,15 @@ def create_first_scrape_dict():
 def adding_onto_first_scrape_dict(new_unique_listings):
     global first_scrape_completed
     for listing in new_unique_listings:
-        first_scrape_completed[listing[1]] += 1
+        first_scrape_completed[listing[0]] += 1
 
 
 # get newly added listings and give error if there are excessive listings
 def fetch_listings(thread_listing_cursor, threaded_listing_connect):
-    global listing_link_num
+    global listing_link_num, last_listing, first_scrape_completed
     has_been_scraped = []
     purged_listings = []
-    query_id_count = {}
-    global last_listing, first_scrape_completed
+    query_new_listing_count = {}
     if len(first_scrape_completed) == 0:
         create_first_scrape_dict()
     if last_listing != None:
@@ -139,18 +138,19 @@ def fetch_listings(thread_listing_cursor, threaded_listing_connect):
     else:
         last_listing = 0
     new_listings = thread_listing_cursor.execute('''SELECT * from listings WHERE id > ?;''', (last_listing,)).fetchall()
-    new_unique_listings = thread_listing_cursor.execute('''SELECT * from listings WHERE id > ?;''', (last_listing,)).fetchall()
+    new_unique_listings = thread_listing_cursor.execute('''SELECT DISTINCT query_id from listings WHERE id > ?;''', (last_listing,)).fetchall()
+    #go through the listings, deleting excessive queries and adding the rest
     if len(new_listings) > 0:
         listing_box.configure(state='normal')
         for listing in new_listings:
             if first_scrape_completed.get(listing[1]) == None:
                 first_scrape_completed[listing[1]] = 0
             try:
-                query_id_count[listing[1]] += 1
+                query_new_listing_count[listing[1]] += 1
             except:
-                query_id_count[listing[1]] = 1
+                query_new_listing_count[listing[1]] = 1
             has_been_scraped.append(listing[1])
-            if query_id_count[listing[1]] > 50 and first_scrape_completed[listing[1]] >= 5 and listing[1] not in purged_listings:
+            if query_new_listing_count[listing[1]] > 50 and first_scrape_completed[listing[1]] > 5 and listing[1] not in purged_listings:
                 handle_excess_listings(listing[1], thread_listing_cursor, threaded_listing_connect)
                 purged_listings.append(listing[1])
             if listing[1] not in purged_listings:

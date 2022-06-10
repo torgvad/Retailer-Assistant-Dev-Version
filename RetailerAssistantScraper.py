@@ -36,17 +36,14 @@ default_header = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
 }
 
-current_header = {
-    "Accept-Language": "en-US,en;q=0.5",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Upgrade-Insecure-Requests": "1",
-    "Accept-Encoding": "br, gzip, deflate",
-    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:90.0) Gecko/20100101 Firefox/90.0",
-}
-first_proxy = FreeProxy(country_id=['US']).get()
+current_header = default_header
+while True:
+    try:
+        first_proxy = FreeProxy(country_id=['US']).get()
+        break
+    except:
+        time.sleep(2)
+        pass
 current_proxy = {"http": first_proxy}
 
 
@@ -63,13 +60,16 @@ class CustomFilter:
 
 
 # use Freeproxy to get new proxy ip and port
+# user fake-useragent to get a new header
 def get_new_header_and_proxy():
     global current_header, current_proxy
-    ua = fake_useragent.UserAgent(fallback='Chrome')
-    ua.random == 'Chrome'
-    current_header["User-Agent"] = ua.chrome
+    # Occasionally either the useragent or proxy will fail
+    # No remediation can be done here other than to just try again
     while True:
         try:
+            ua = fake_useragent.UserAgent(fallback='Chrome')
+            ua.random == 'Chrome'
+            current_header["User-Agent"] = ua.chrome
             current_proxy["http"] = FreeProxy(country_id=['US']).get()
             break
         except:
@@ -448,6 +448,13 @@ class custom_Ebay_formatting(CustomFormatting):
         return listing
 
 
+class custom_Rubylane_formatting(CustomFormatting):
+    @staticmethod
+    def format(listing):
+        listing[8] = listing[8][:listing[8].find(";t")]
+        return listing
+
+
 class custom_Property_Room_formatting(CustomFormatting):
     @staticmethod
     def format(listing):
@@ -485,9 +492,10 @@ def add_listing_to_db(query_id, retailer, listings):
     t_conn = sqlite3.connect('data/listings.db')
     t_cursor = t_conn.cursor()
     for listing in listings:
-        db_match = t_cursor.execute("""SELECT * from listings where link=? and retailer=? and query_id=?;""", [listing[8], retailer, query_id]).fetchone()
         listing = last_minute_formatting(listing, retailer)
         if listing != False:
+            db_match = t_cursor.execute("""SELECT * from listings where link=? and retailer=? and query_id=?;""",
+                                        [listing[8], retailer, query_id]).fetchone()
             if db_match == None:
                 t_cursor.execute("""INSERT INTO listings
                                 (query_id, retailer, name, bid, shipping_cost, current_price, 
@@ -503,7 +511,7 @@ def add_listing_to_db(query_id, retailer, listings):
     return True
 
 
-# runs until reaches the oldest item
+# runs until reaches the oldest item or the 5th page
 def cycle_through_pages(query, webstyle):
     web_name = query[2]
     i = 1
