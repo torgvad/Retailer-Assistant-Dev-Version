@@ -1,2 +1,4 @@
 # Retailer-Assistant-Dev-Version
 This is the developer version my my senior capstone: Online Retailer Assistant. If you want the executable version or want to learn about the nature of this project please go to: https://github.com/torgvad/Retailer-Assistant. This version is meant for anyone wanting to modify or add more websites to my existing project. There is thorough instruction in the DEV_README.pdf which lays out how to add more websites to the program. 
+
+IMPORTANT: if you simply want to examine the code and give the program a test (assumming you have all required packages) then run RetailerAssistant.py, type in your queries, then run RetailerAssistantScraper.py. This program is meant to run in the background so it sleeps for a while between each round of scraping. You can change the variable sleep_time in RetailerAssistantScraper.py to speed up how often scrapes are done.
