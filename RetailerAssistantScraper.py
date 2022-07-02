@@ -14,13 +14,13 @@ import bs4
 import random
 from fp.fp import FreeProxy
 from requests.exceptions import ProxyError
-import fake_useragent
+import pyuser_agent
 
 
 total_sleeps = 1
 latest_query_id = 0
 webstyles = {}
-sleep_time = 1800
+sleep_time = 180
 scraped_queries = []
 # the data structure for storing queries: {retailer: {30: [queryList], 1: [queryList2], 2: [queryList3]}}
 queries = {}
@@ -60,16 +60,15 @@ class CustomFilter:
 
 
 # use Freeproxy to get new proxy ip and port
-# user fake-useragent to get a new header
+# get new user agent
 def get_new_header_and_proxy():
     global current_header, current_proxy
     # Occasionally either the useragent or proxy will fail
     # No remediation can be done here other than to just try again
     while True:
         try:
-            ua = fake_useragent.UserAgent(fallback='Chrome')
-            ua.random == 'Chrome'
-            current_header["User-Agent"] = ua.chrome
+            obj = pyuser_agent.UA()
+            current_header["User-Agent"] = obj.chrome
             current_proxy["http"] = FreeProxy(country_id=['US']).get()
             break
         except:
