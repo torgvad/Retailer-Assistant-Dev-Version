@@ -20,29 +20,29 @@ else:
 
 test_search = "watch"
 
-website = 'ex'
-retailer_name = "ex"
-listing_html = "ex"
+website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&_sop=10&_ipg=200&_pgn=%d'
+retailer_name = "Ebay"
+listing_html = "li,class:s-item"
 listing_depth = 0
-title_html = "ex"
+title_html = "h3,class:s-item__title"
 title_depth = 0
 curr_bid_html = "ex"
 curr_bid_depth = 0
-shipping_html = "ex"
+shipping_html = "span,class:s-item__shipping s-item__logisticsCost"
 shipping_depth = 0
-price_html = "ex"
+price_html = "span,class:s-item__price"
 price_depth = 0
-bid_end_html = "ex"
+bid_end_html = "span,class:s-item__time-left"
 bid_end_depth = 0
-seller_html = "ex"
+seller_html = "span,class:s-item__seller-info-text"
 seller_depth = 0
 buy_now_price_html = "ex"
 buy_now_price_depth = 0
 min_bid_html = "ex"
 min_bid_depth = 0
-link_html = "ex"
+link_html = "a,class:s-item__link"
 link_depth = 0
-extra_html = "ex"
+extra_html = "span,class:s-item__bids s-item__bidCount"
 extra_depth = 0
 
 
@@ -222,11 +222,19 @@ def test(search, site):
     res = requests.get(url, headers=header, proxies=current_proxy)
     res.raise_for_status()
     soup = BeautifulSoup(res.text, 'html.parser')
+    # Uncomment the print below to see all html data that beatifulsoup has received.
+    # It may be different than what you see using the inspect element on a browser
+    # print(soup)
     listings = get_every_listing(soup, webstyle)
     all_listings = []
+    print("RAW LISTINGS")
+    for i in range(0, 10):
+        print(listings[i])
     for listing in listings:
         if type(listing) is not bs4.element.Comment:
             all_listings.append(format_elements(get_elements(listing, webstyle), url, site))
+    print("-------------------------------------------------------------------------")
+    print("FORMATTED LISTINGS")
     for listing in all_listings:
         print(listing)
 
