@@ -5,12 +5,12 @@ cursor = conn.cursor()
 
 
 def restore_ebay():
-    website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&_sop=10&_ipg=200&_pgn=%d'
+    website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&LH_All=1&_ipg=240&_pgn=%d'
     retailer_name = "Ebay"
-    listing_html = "li,class:s-item"
+    listing_html = "div,class:s-item__info clearfix"
     listing_depth = 0
-    title_html = "h3,class:s-item__title"
-    title_depth = 0
+    title_html = "div,class:s-item__title"
+    title_depth = 1
     curr_bid_html = "ex"
     curr_bid_depth = 0
     shipping_html = "span,class:s-item__shipping s-item__logisticsCost"
@@ -91,7 +91,7 @@ def restore_rubylane():
 def restore_prop_room():
     website = 'https://www.propertyroom.com/s/%s/%d#scrollcontainer'
     retailer_name = "Property Room"
-    listing_html = "div,i:0"
+    listing_html = "div,class:product-details-container-category"
     listing_depth = 0
     title_html = "div,class:product-name-category"
     title_depth = 1

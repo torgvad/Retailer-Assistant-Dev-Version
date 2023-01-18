@@ -4,10 +4,10 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 
-url = "https://www.ebay.com/sch/i.html?_from=R40&_nkw=watch&_sacat=0&LH_TitleDesc=0&_sop=10&_ipg=200&_pgn=1"
-element = "h3"
+url = "https://www.propertyroom.com/s/gold+necklace/1#scrollcontainer"
+element = "div"
 id_type = "class"
-name = "s-item__title"
+name = "product-details-container-category"
 depth = 0
 
 
