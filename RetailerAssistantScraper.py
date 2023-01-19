@@ -335,12 +335,10 @@ def get_every_listing(soup, webstyle):
     depth = int(webstyle[2])
     listings = []
     for elements in parent_element:
-        for element in elements:
-            if len(element) > 1:
-                if depth > 0:
-                    listings.append(element.findChildren()[depth - 1])
-                else:
-                    listings.append(element)
+        if depth > 0:
+            listings.append(elements.findChildren()[depth - 1])
+        else:
+            listings.append(elements)
     return listings
 
 
@@ -439,6 +437,8 @@ class custom_Ebay_formatting(CustomFormatting):
                 if datetime.datetime.now().hour == 23 and (int(time_left[:time_left.find("m")]) + datetime.now().minute) >= 60:
                     extended_date += timedelta(days=1)
             listing[4] = extended_date.strftime('%Y-%m-%d')
+        if listing[5].startswith("Seller: "):
+            listing[5] = listing[5][8:]
         if listing[9] != "ex":
             listing[1] = listing[3]
             listing[3] = "ex"
