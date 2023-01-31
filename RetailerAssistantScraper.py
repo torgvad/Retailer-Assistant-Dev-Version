@@ -379,6 +379,7 @@ def check_id_existance(id):
     t_conn = sqlite3.connect('data/queries.db')
     t_cursor = t_conn.cursor()
     id_check = t_cursor.execute('''SELECT * from queries WHERE id=?;''', [id]).fetchone()
+    t_conn.close
     if id_check != None:
         return True
     else:
@@ -507,6 +508,7 @@ def add_listing_to_db(query_id, retailer, listings):
                 t_conn.commit()
                 return False
     t_conn.commit()
+    t_conn.close()
     return True
 
 
@@ -612,6 +614,8 @@ check_queries()
 latest_query_id = queries_cursor.execute('''SELECT MAX(id) from queries;''').fetchone()[0]
 if latest_query_id == None:
     latest_query_id = 0
-
 threading.Thread(target=listing_and_query_checker, daemon=True).start()
 scrape()
+conn.close()
+webstyle_conn.close()
+queries_conn.close()

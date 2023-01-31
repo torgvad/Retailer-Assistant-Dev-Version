@@ -49,7 +49,7 @@ def kill_scraper():
 def restart_scraper():
     if check_scraper_status() == False:
         try:
-            os.startfile("RetailerAssistantScraper.exe")
+            os.startfile("RetailerAssistantScraper\RetailerAssistantScraper.exe")
         except:
             messagebox.showinfo("Scraper missing", "Scraper missing. You will have to redownload it.\n")
     if check_scraper_status():
@@ -78,6 +78,7 @@ def handle_excess_listings(query_id, thread_listing_cursor, thread_listing_conne
     threaded_query_connect.commit()
     thread_listing_cursor.execute('''DELETE from listings WHERE query_id=?; ''', [query_id])
     thread_listing_connect.commit()
+    threaded_query_connect.close()
     selected_query = ""
     global first_scrape_completed
     query_iterator = 0
@@ -114,6 +115,7 @@ def create_first_scrape_dict():
     thread_query_connection = sqlite3.connect('data/queries.db')
     thread_cursor = thread_query_connection.cursor()
     last_query = thread_cursor.execute('''SELECT DISTINCT id from queries;''').fetchall()
+    thread_query_connection.close()
     for query in last_query:
         first_scrape_completed[int(query[0])] = 0
 
@@ -184,6 +186,7 @@ def timed_checker():
             scraper_check_label['text'] = "Scraper is online"
         else:
             scraper_check_label['text'] = "Scraper is offline"
+    threaded_listing_cursor.close()
 
 
 # clear the listings of the currently selected query
@@ -579,4 +582,5 @@ except:
 threading.Thread(target=restart_scraper, daemon=True).start()
 threading.Thread(target=timed_checker, daemon=True).start()
 mainloop()
-
+query_connection.close()
+listing_connect.close()
