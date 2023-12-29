@@ -9,7 +9,7 @@ cursor = conn.cursor()
 def restore_ebay():
     website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&LH_All=1&_ipg=240&_pgn=%d'
     retailer_name = "Ebay"
-    listing_html = "div,class:s-item__info clearfix"
+    listing_html = "div,class:s-item__wrapper clearfix"
     listing_depth = 0
     title_html = "div,class:s-item__title"
     title_depth = 1
