@@ -155,13 +155,43 @@ def format_slash_url(url, slash_link):
 class custom_Ebay_filter(CustomFilter):
     @staticmethod
     def filter(filtered_listing, unfiltered_listing):
-        if filtered_listing[0] == "New Listing" or filtered_listing[0] == "ex":
-            element = str(unfiltered_listing[0])
-            span_index = element.index("/span>")
-            element = element[span_index + 6:]
-            h3_index = element.index("</h3")
-            filtered_listing[0] = element[:h3_index]
-        return filtered_listing
+        if str(unfiltered_listing[0]).find("Shop on eBay") > -1:
+            filtered_listing[0] = "ex"
+            filtered_listing[2] = "ex"
+            return filtered_listing
+        #loop through all elements to find newer format changes that need more parsing
+        i=0
+        for item in filtered_listing:
+            if item == "ex" and str(unfiltered_listing[i]).rfind("0-->") != -1:
+                temp = str(unfiltered_listing[i])
+                temp = temp[temp.rfind("0-->") + 4:]
+                temp = temp[:temp.find("<!-")]
+                filtered_listing[i] = temp
+            i = i + 1
+        newer = custom_Ebay_filter.price_shipping_format(filtered_listing)
+        return newer
+    # further edit any strange edge case HTML formatting
+    @staticmethod
+    def price_shipping_format(listing):
+        shipping = str(listing[2])
+        price = str(listing[3])
+        if shipping.find("Free") > -1:
+            listing[2] = 'ex'
+        if str(listing[2]) != 'ex':
+            shipping = shipping[2:shipping.find(".")]
+            shipping = shipping.replace(",", '')
+            if shipping.find('ITALIC">') > -1:
+                shipping = shipping[shipping.find(">")+3:]
+            listing[2] = shipping
+        if price != 'ex':
+            if price.find(".") != -1:
+                price = price[1:price.find(".")]
+            if price.find('ITALIC">') > -1:
+                price = price[price.find(">") + 3:]
+            listing[3] = price.replace(",", '')
+            if len(price) == 0:
+                listing[3] = "ex"
+        return listing
 
 
 # call the user-made subclass of CustomFilter if one exists
@@ -393,7 +423,7 @@ def get_listings(all_listings, webstyle, url, query, website):
         if type(listing) is not bs4.element.Comment and type(listing) != 'NoneType':
             listing_elements = get_elements(listing, webstyle)
             listing_elements = format_elements(listing_elements, url, website)
-            if filter_results(listing_elements, query) == True and listing_elements[0] != "ex":
+            if listing_elements[0] != "ex" and filter_results(listing_elements, query) == True:
                 all_listing_elements.append(listing_elements)
     return all_listing_elements
 
