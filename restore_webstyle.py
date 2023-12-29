@@ -4,6 +4,8 @@ conn = sqlite3.connect('data/webstyles.db')
 cursor = conn.cursor()
 
 
+#adding this in to make git see changes
+
 def restore_ebay():
     website = 'https://www.ebay.com/sch/i.html?_from=R40&_nkw=%s&_sacat=0&LH_TitleDesc=0&LH_All=1&_ipg=240&_pgn=%d'
     retailer_name = "Ebay"
